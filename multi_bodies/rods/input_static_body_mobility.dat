@@ -1,0 +1,21 @@
+# Select problem to solve
+scheme                                   body_mobility
+
+# Select implementation to compute the blobs mobility
+# Options: python and boost
+mobility_blobs_implementation            python_no_wall
+
+#not used here: mobility_vector_prod_implementation     numba_no_wall
+
+# Set fluid viscosity (eta) and blob radius
+eta                                      1.0
+#blob_radius                              0.010838866643485 # res 1
+#blob_radius                              0.007616276270953 # res 2
+#blob_radius                              0.006207359652491 # res 3
+blob_radius                              0.004963143047909 # res 4
+
+# Set output name
+output_name                              rods/data/run.single
+
+# Load rigid bodies configuration
+structure	rods/Structures/rt_optrod_aspect20_res4.vertex rods/Structures/single.clones
