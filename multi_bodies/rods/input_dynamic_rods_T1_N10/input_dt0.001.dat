@@ -19,11 +19,11 @@ domain				 no_wall
 
 # Set fluid viscosity (eta), gravity (g) and blob radius
 eta				 1.000000
-g				 1.000000
+g				 0.000000
 blob_radius				 0.0108388666434850
 
 # Set output name
 output_name				 rods/data/dynamic_rods_T1_N10/dt0.001
 
 # Load rigid bodies configuration, provide *.vertex and *.clones files
-structure rods/Structures/rt_optrod_aspect20_res1.vertex rods/Structures/random10.clones
+structure rods/Structures/rt_optrod_aspect20_res1.vertex rods/Structures/random10_L0.30_tol001.clones

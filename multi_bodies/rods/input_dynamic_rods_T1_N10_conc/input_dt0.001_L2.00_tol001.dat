@@ -1,0 +1,29 @@
+# Select integrator
+scheme 				 stochastic_GDC_RFD
+
+# Select implementation to compute M and M*f
+mobility_blobs_implementation				 python_no_wall
+mobility_vector_prod_implementation				 numba_no_wall
+
+# Select implementation to compute the blobs-blob interactions
+blob_blob_force_implementation				 None
+
+body_body_force_torque_implementation				 python
+
+# Set time step, number of steps and save frequency
+dt				 0.001000
+n_steps				1000
+n_save 				 1
+
+domain				 no_wall
+
+# Set fluid viscosity (eta), gravity (g) and blob radius
+eta				 1.000000
+g				 0.000000
+blob_radius				 0.0108388666434850
+
+# Set output name
+output_name				 rods/data/dynamic_rods_T1_N10_conc/dt0.001_L2.00_tol001
+
+# Load rigid bodies configuration, provide *.vertex and *.clones files
+structure rods/Structures/rt_optrod_aspect20_res1.vertex rods/Structures/random10_L2.00_tol001.clones
