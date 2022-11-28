@@ -28,7 +28,8 @@ if found_pycuda:
     autoinit_pycuda = False
   if autoinit_pycuda:
     try:
-      from . import forces_pycuda
+#      from . import forces_pycuda
+      import forces_pycuda
     except ImportError:
       from .multi_bodies import forces_pycuda
 # If numba is installed import forces_numba
