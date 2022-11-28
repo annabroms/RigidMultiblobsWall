@@ -11,15 +11,21 @@ import imp
 import os.path
 from functools import partial
 
+#import general_application_utils as utils #this is likely the problematic row
+#from ... import general_application_utils as utils
+#from .general_application_utils import general_application_utils as utils
 import general_application_utils as utils
 from quaternion_integrator.quaternion import Quaternion
 
 # If pycuda is installed import forces_pycuda
-try: 
+try:
   imp.find_module('pycuda')
   found_pycuda = True
 except ImportError:
   found_pycuda = False
+
+
+
 if found_pycuda:
   try:
     import pycuda.autoinit
@@ -30,10 +36,11 @@ if found_pycuda:
     try:
 #      from . import forces_pycuda
       import forces_pycuda
+      print("import forces pycuda")
     except ImportError:
       from .multi_bodies import forces_pycuda
 # If numba is installed import forces_numba
-try: 
+try:
   imp.find_module('numba')
   found_numba = True
 except ImportError:
@@ -66,13 +73,13 @@ if found_numba:
     del sys.modules['forces_numba']
     sys.modules['forces_numba'] = __import__('forces_numba_user_defined')
     import forces_numba
-    
+
 
 def project_to_periodic_image(r, L):
   '''
   Project a vector r to the minimal image representation
-  centered around (0,0,0) and of size L=(Lx, Ly, Lz). If 
-  any dimension of L is equal or smaller than zero the 
+  centered around (0,0,0) and of size L=(Lx, Ly, Lz). If
+  any dimension of L is equal or smaller than zero the
   box is assumed to be infinite in that direction.
   '''
   if L is not None:
@@ -86,18 +93,18 @@ def default_zero_r_vectors(r_vectors, *args, **kwargs):
 
 
 def default_zero_blobs(body, *args, **kwargs):
-  ''' 
+  '''
   Return a zero array of shape (body.Nblobs, 3)
   '''
   return np.zeros((body.Nblobs, 3))
 
 
 def default_zero_bodies(bodies, *args, **kwargs):
-  ''' 
+  '''
   Return a zero array of shape (2*len(bodies), 3)
   '''
   return np.zeros((2*len(bodies), 3))
-  
+
 
 def set_slip_by_ID(body, slip, *args, **kwargs):
   '''
@@ -123,12 +130,12 @@ def set_slip_by_ID(body, slip, *args, **kwargs):
 def active_body_slip(body, slip):
   '''
   This function set the slip read from the *.slip file to the
-  blobs. The slip on the file is given in the body reference 
+  blobs. The slip on the file is given in the body reference
   configuration (quaternion = (1,0,0,0)) therefore this
   function rotates the slip to the current body orientation.
-  
+
   This function can be used, for example, to model active rods
-  that propel along their axes. 
+  that propel along their axes.
   '''
   # Get rotation matrix
   rotation_matrix = body.orientation.rotation_matrix()
@@ -144,11 +151,11 @@ def bodies_external_force_torque(bodies, r_vectors, *args, **kwargs):
   '''
   This function returns the external force-torques acting on the bodies.
   It returns an array with shape (2*len(bodies), 3)
-  
+
   In this is example we just set it to zero.
   '''
   return np.zeros((2*len(bodies), 3))
-  
+
 
 def blob_external_forces(r_vectors, *args, **kwargs):
   '''
@@ -192,14 +199,14 @@ def blob_external_force(r_vectors, *args, **kwargs):
   '''
   This function compute the external force acting on a
   single blob. It returns an array with shape (3).
-  
+
   In this example we add gravity and a repulsion with the wall;
   the interaction with the wall is derived from the potential
 
   U(z) = U0 + U0 * (a-z)/b   if z<a
   U(z) = U0 * exp(-(z-a)/b)  iz z>=a
 
-  with 
+  with
   e = repulsion_strength_wall
   a = blob_radius
   h = distance to the wall
@@ -211,7 +218,7 @@ def blob_external_force(r_vectors, *args, **kwargs):
   blob_mass = kwargs.get('blob_mass')
   blob_radius = kwargs.get('blob_radius')
   g = kwargs.get('g')
-  repulsion_strength_wall = kwargs.get('repulsion_strength_wall') 
+  repulsion_strength_wall = kwargs.get('repulsion_strength_wall')
   debye_length_wall = kwargs.get('debye_length_wall')
   # Add gravity
   f += -g * blob_mass * np.array([0., 0., 1.0])
@@ -232,18 +239,18 @@ def calc_one_blob_forces(r_vectors, *args, **kwargs):
   Nblobs = r_vectors.size // 3
   force_blobs = np.zeros((Nblobs, 3))
   r_vectors = np.reshape(r_vectors, (Nblobs, 3))
-  
+
   # Loop over blobs
   force_blobs = blob_external_forces(r_vectors, *args, **kwargs)
   return force_blobs
 
 
 def calc_one_blob_torques(r_vectors, *args, **kwargs):
-  ''' 
+  '''
   Compute one-blob torques. It returns an array with shape (Nblobs, 3).
   '''
   Nblobs = r_vectors.size // 3
-  return np.zeros((Nblobs, 3)) 
+  return np.zeros((Nblobs, 3))
 
 
 def set_blob_blob_forces(implementation):
@@ -252,8 +259,8 @@ def set_blob_blob_forces(implementation):
   to the right function.
   The implementations in numba, pycuda and C++ are much faster than the
   implimentation in python.
-  To use the pycuda implementation is necessary to have installed pycuda and a GPU 
-  with CUDA capabilities. To use the C++ implementation the user has to compile 
+  To use the pycuda implementation is necessary to have installed pycuda and a GPU
+  with CUDA capabilities. To use the C++ implementation the user has to compile
   the file blob_blob_forces.cpp.
   '''
   if implementation == 'None':
@@ -292,10 +299,10 @@ def blob_blob_force(r, *args, **kwargs):
   with vector between blob centers r.
 
   In this example the force is derived from the potential
-  
+
   U(r) = U0 + U0 * (2*a-r)/b   if z<2*a
   U(r) = U0 * exp(-(r-2*a)/b)  iz z>=2*a
-  
+
   with
   eps = potential strength
   r_norm = distance between blobs
@@ -312,10 +319,10 @@ def blob_blob_force(r, *args, **kwargs):
   project_to_periodic_image(r, L)
   r_norm = np.linalg.norm(r)
   if r_norm > 2*a:
-    return -((eps / b) * np.exp(-(r_norm-2*a) / b) / np.maximum(r_norm, np.finfo(float).eps)) * r 
+    return -((eps / b) * np.exp(-(r_norm-2*a) / b) / np.maximum(r_norm, np.finfo(float).eps)) * r
   else:
     return -((eps / b) / np.maximum(r_norm, np.finfo(float).eps)) * r;
-  
+
 
 def calc_blob_blob_forces_python(r_vectors, *args, **kwargs):
   '''
@@ -340,7 +347,7 @@ def calc_blob_blob_forces_python(r_vectors, *args, **kwargs):
 def set_body_body_forces_torques(implementation):
   '''
   Set the function to compute the body-body forces
-  to the right function. 
+  to the right function.
   '''
   if implementation == 'None':
     return default_zero_bodies
@@ -352,11 +359,11 @@ def body_body_force_torque(r, quaternion_i, quaternion_j, *args, **kwargs):
   '''
   This function compute the force between two bodies
   with vector between locations r.
-  In this example the torque is zero and the force 
+  In this example the torque is zero and the force
   is derived from a Yukawa potential
-  
+
   U = eps * exp(-r_norm / b) / r_norm
-  
+
   with
   eps = potential strength
   r_norm = distance between bodies' location
@@ -368,11 +375,11 @@ def body_body_force_torque(r, quaternion_i, quaternion_j, *args, **kwargs):
   L = kwargs.get('periodic_length')
   eps = kwargs.get('repulsion_strength')
   b = kwargs.get('debye_length')
-  
+
   # Compute force
   project_to_periodic_image(r, L)
   r_norm = np.linalg.norm(r)
-  force_torque[0] = -((eps / b) + (eps / r_norm)) * np.exp(-r_norm / b) * r / r_norm**2  
+  force_torque[0] = -((eps / b) + (eps / r_norm)) * np.exp(-r_norm / b) * r / r_norm**2
   return force_torque
 
 
@@ -383,7 +390,7 @@ def calc_body_body_forces_torques_python(bodies, r_vectors, *args, **kwargs):
   '''
   Nbodies = len(bodies)
   force_torque_bodies = np.zeros((2*len(bodies), 3))
-  
+
   # Double loop over bodies to compute forces
   for i in range(Nbodies-1):
     for j in range(i+1, Nbodies):
@@ -417,14 +424,14 @@ def force_torque_calculator_sort_by_bodies(bodies, r_vectors, *args, **kwargs):
   force_blobs += calc_one_blob_forces(r_vectors, blob_radius = blob_radius, blob_mass = blob_mass, *args, **kwargs)
 
   # Compute blob-blob forces (same function for all pair of blobs)
-  force_blobs += calc_blob_blob_forces(r_vectors, blob_radius = blob_radius, *args, **kwargs)  
+  force_blobs += calc_blob_blob_forces(r_vectors, blob_radius = blob_radius, *args, **kwargs)
   # Compute body force-torque forces from blob forces
   offset = 0
   for k, b in enumerate(bodies):
     # Add force to the body
     force_torque_bodies[2*k:(2*k+1)] += sum(force_blobs[offset:(offset+b.Nblobs)])
     # Add torque to the body
-    R = b.calc_rot_matrix()  
+    R = b.calc_rot_matrix()
     force_torque_bodies[2*k+1:2*k+2] += np.dot(R.T, np.reshape(force_blobs[offset:(offset+b.Nblobs)], 3*b.Nblobs))
     offset += b.Nblobs
 
@@ -464,4 +471,3 @@ if os.path.isfile('user_defined_functions.py'):
   user_defined_functions_found = True
 if user_defined_functions_found:
   import user_defined_functions
-
