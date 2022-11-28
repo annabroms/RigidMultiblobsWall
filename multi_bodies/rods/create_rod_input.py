@@ -13,7 +13,7 @@ import os
 steps = 1
 dtVec = np.logspace(-3,-1,steps)
 T = 1 #final simulation time
-res = 1 # sets resolution for the rods, an intiger 1 2 3 4 with 4 the finest, 
+res = 4 # sets resolution for the rods, an intiger 1 2 3 4 with 4 the finest, 
 #will affect the accuracy in a non-trivial manner
 eta = 1.0 #viscosity
 g = 0.0 #gravity
@@ -26,9 +26,11 @@ radius = radList[res-1]
 numPart = 10 #number of particles in the simulation
 
 #configList = ["random%u_L%1.2f_tol001" % (numPart,i) for i in [5, 2, 1, 0.5, 0.3]] # start configurations of different concenterations 
-concList = [5, 2, 1, 0.5, 0.3]
+#concList = [5, 2, 1, 0.5, 0.3]
+concList = [5]
 
 folder = "dynamic_rods_T%u_N%u_conc" % (T,numPart)
+folder = "dynamic_rods_T%u_N%u_testcuda" % (T,numPart)
 path = "input_%s" %folder
 isExist = os.path.exists(path)
 if not isExist:
@@ -57,8 +59,8 @@ for c in concList:
         f = open(str, "w")
         
         f.write("# Select integrator\n")
-        f.write("scheme \t\t\t\t stochastic_GDC_RFD\n\n")
-        #f.write("scheme \t\t\t\t deterministic_forward_euler\n\n")
+#        f.write("scheme \t\t\t\t stochastic_GDC_RFD\n\n")
+        f.write("scheme \t\t\t\t deterministic_forward_euler\n\n")
         
         f.write("# Select implementation to compute M and M*f\n")
         f.write("mobility_blobs_implementation\t\t\t\t python_no_wall\n")
