@@ -1,34 +1,48 @@
 
-#cfg = dlmread('../../Structures/Cylinder_N_86_Lg_1_9384_Rg_0_1484.vertex');
-cfg = dlmread('../Structures/rt_optrod_aspect20_res1.vertex')
+clear;
+close all;
+
+print_pngs = 1; 
+
+%cfg = dlmread('../../Structures/Cylinder_N_86_Lg_1_9384_Rg_0_1484.vertex');
+cfg = dlmread('../Structures/rt_optrod_aspect20_res1.vertex');
 cfg(1,:) = [];
 cfg(cfg>1e4) = 0;
 
-#read in simulation data
-#A = dlmread(['DP_run.config']);
-A = dlmread(['../data/dynamic_rods_T1_N10_movie\dt0.001_L1.00_tol001.random10_L1.00_tol001.config'])
+%read in simulation data
+%A = dlmread(['DP_run.config']);
+A = dlmread(['../data/dynamic_rods_T1_N10_movie/dt0.001_L1.00_tol001.random10_L1.00_tol001.config']);
 n_bods = round(A(1,1));
 rem = mod(length(A),n_bods+1);
 A(end-rem+1:end,:) = [];
 A(1:n_bods+1:end,:) = [];
 
 
-zmax = 1.0
-a = 0.07419999999999999
-L = 16.18021593796416 %40.106052394096004
+zmax = 0;
+alist = [0.010838866643485, 0.007616276270953, 0.006207359652491, 0.004963143047909]; %given ar = 20
+a = alist(1); %with res 1
+%L = 16.18021593796416 %40.106052394096004
+L = 2.0;
 
 [sx,sy,sz] = sphere(20);
 [X, Y] = meshgrid([0:0.5:L],[0:0.5:L]);
-k = 0;
+%[X, Y] = meshgrid([-L:0.5:L],[-L:0.5:L]);
+f= 0; %frame number
 
-skip = 10
-plot_walls=0
+skip = 10;
+skip = 1; 
+plot_walls=0;
+end_ind = length(A)/n_bods;
+end_ind = 50; 
 
-for i = (length(A)/n_bods) %1:skip:
+%for i = (length(A)/n_bods) %1:skip:
+for i = 1:skip:end_ind %1:skip:
     clf
     i
 
-    k = k+1;
+    f = f+1;
+    
+    % read coordinates 
     x = A((i-1)*n_bods+1:i*n_bods,1);
     y = A((i-1)*n_bods+1:i*n_bods,2);
     z = A((i-1)*n_bods+1:i*n_bods,3);
@@ -58,10 +72,18 @@ for i = (length(A)/n_bods) %1:skip:
 
 
 
-        daspect([1 1 1])
-        view([20 7]) %view([-20 35]) %view([-140 10])%
-        xlim([0 L])
-        ylim([0 L])
+        %daspect([1 1 1])
+        axis equal
+        %view([20 7]) %view([-20 35]) %view([-140 10])%
+%         xlim([0 L])
+%         ylim([0 L])
+%         zlim([0 L])
+        xlim([-L L])
+        ylim([-L L])
+        zlim([-L L])
+        view([32,-19]); 
+        grid on
+    
         %zlim([-a 4*a+a])
         hold all
 
@@ -77,6 +99,10 @@ for i = (length(A)/n_bods) %1:skip:
     drawnow
 
     hold off
+    
+    if print_pngs == 1
+        print('-dpng',['../rods_pngs/rods_' num2str(f) '.png'],'-r100')
+    end
 end
 
 function R = Rot_From_Q(s,p)
