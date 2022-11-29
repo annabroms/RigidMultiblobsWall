@@ -1,5 +1,5 @@
 # Select integrator
-scheme 				 deterministic_forward_euler
+scheme 				 stochastic_GDC_RFD
 
 # Select implementation to compute M and M*f
 mobility_blobs_implementation				 python_no_wall
