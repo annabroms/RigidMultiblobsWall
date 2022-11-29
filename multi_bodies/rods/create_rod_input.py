@@ -11,12 +11,14 @@ import os
 
 #write input files for dynamic simulation with different dt
 steps = 1
-#dtVec = np.logspace(-3,-1,steps)
-dtVec = np.logspace(-2,-1,steps)
-T = 1 #final simulation time
-res = 4 # sets resolution for the rods, an intiger 1 2 3 4 with 4 the finest,
+dtVec = np.logspace(-3,-1,steps)
+#dtVec = np.logspace(-2,-1,steps)
+T = 1 #NOT IN USE: final simulation time
+timeSteps = 200 # number of timesteps
+res = 1 # sets resolution for the rods, an intiger 1 2 3 4 with 4 the finest,
 #will affect the accuracy in a non-trivial manner
 eta = 1.0 #viscosity
+eta = 10 #just for testing
 g = 0.0 #gravity
 save_freq = 1 #save frequency: 1 means that every time step is saved.
 ar = 20
@@ -24,15 +26,20 @@ if ar==20:
     radList = [0.010838866643485, 0.007616276270953, 0.006207359652491, 0.004963143047909] #provdied ar = 20
 radius = radList[res-1]
 
-numPart = 10 #number of particles in the simulation
+#numPart = 10 #number of particles in the simulation
 numPart = 100
 
 #configList = ["random%u_L%1.2f_tol001" % (numPart,i) for i in [5, 2, 1, 0.5, 0.3]] # start configurations of different concenterations
 #concList = [5, 2, 1, 0.5, 0.3]
-concList = [2]
+concList = [1]
 
-folder = "dynamic_rods_T%u_N%u_conc" % (T,numPart)
-folder = "dynamic_rods_T%u_N%u_testcuda" % (T,numPart)
+#old folder names
+#folder = "dynamic_rods_T%u_N%u_conc" % (T,numPart)
+#folder = "dynamic_rods_T%u_N%u_testcuda" % (T,numPart)
+#folder = "dynamic_rods_T%u_N%u_movie" % (T,numPart)
+
+folder = "dynamic_rods_N%u_conc" % (numPart)
+folder = "dynamic_rods_N%u" % numPart
 path = "input_%s" %folder
 isExist = os.path.exists(path)
 if not isExist:
@@ -48,21 +55,22 @@ if not isExist:
    print("The new data directory is created!")
 
 for c in concList:
-    config = "random%u_L%1.2f_tol0001" % (numPart,c)
+    config = "random%u_L%1.2f_eta%1.2f" % (numPart,c,eta)
     for dt in dtVec:
-        name = "dt%1.3f_L%1.2f_tol0001" % (dt,c)
+        name = "dt%1.5f_L%1.2f_eta%1.2f" % (dt,c,eta)
         str = "%s/input_%s.dat" %(path,name)
         print(str)
 
-        N = round(T/dt)
+        #N = round(T/dt)
+        N = timeSteps
         print(dt)
         print("%u" % N)
 
         f = open(str, "w")
 
         f.write("# Select integrator\n")
-#        f.write("scheme \t\t\t\t stochastic_GDC_RFD\n\n")
-        f.write("scheme \t\t\t\t deterministic_forward_euler\n\n")
+        f.write("scheme \t\t\t\t stochastic_GDC_RFD\n\n")
+        #f.write("scheme \t\t\t\t deterministic_forward_euler\n\n")
 
         f.write("# Select implementation to compute M and M*f\n")
         f.write("mobility_blobs_implementation\t\t\t\t python_no_wall\n")
@@ -76,7 +84,8 @@ for c in concList:
         f.write("# Set time step, number of steps and save frequency\n")
         f.write("dt\t\t\t\t %f\n" % dt)
         f.write("n_steps\t\t\t\t%u\n" %N)
-        f.write("n_save \t\t\t\t %u\n\n"% save_freq)
+        f.write("n_save \t\t\t\t %u\n"% save_freq)
+        f.write("save_clones \t\t\t\t one_file\n\n")
 
         f.write("domain\t\t\t\t no_wall\n\n")
 

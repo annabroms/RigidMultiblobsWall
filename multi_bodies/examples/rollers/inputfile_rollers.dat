@@ -8,11 +8,11 @@
 # Select integrator
 scheme					                       stochastic_adams_bashforth_rollers
 
-# Define implementation to compute the blobs mobility 
-mobility_vector_prod_implementation    pycuda
+# Define implementation to compute the blobs mobility
+mobility_vector_prod_implementation    numba_no_wall
 
 # Define implementation to compute the blobs-blob force and pass its arguments
-blob_blob_force_implementation	       pycuda
+blob_blob_force_implementation	       numba
 repulsion_strength	   		             0.0165677856
 debye_length	   			                 0.0656
 
@@ -36,10 +36,11 @@ omega_one_roller			                 0.0	 62.8	      0.0
 # Select free or constrained kinematics
 free_kinematics				                 True
 
+domain                                 no_wall
 
 # Set interaction with the wall
-repulsion_strength_wall			           0.0165677856
-debye_length_wall	   		               0.0656
+#repulsion_strength_wall			           0.0165677856
+#debye_length_wall	   		               0.0656
 
 # Seed random number generator
 # seed					 1
@@ -50,6 +51,3 @@ save_clones				                     one_file
 
 # Read structures
 structure	../../Structures/blob.vertex rollers.clones
-
-
-

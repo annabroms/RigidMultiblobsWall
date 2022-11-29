@@ -16,12 +16,12 @@ class ReadInput(object):
     self.entries = entries
     self.input_file = entries
     self.options = {}
-    number_of_structures = 0 
-    number_of_obstacles = 0 
-    number_of_articulated = 0 
+    number_of_structures = 0
+    number_of_obstacles = 0
+    number_of_articulated = 0
 
     # Read input file
-    comment_symbols = ['#']   
+    comment_symbols = ['#']
     with open(self.input_file, 'r') as f:
       # Loop over lines
       for line in f:
@@ -60,7 +60,7 @@ class ReadInput(object):
     self.output_name = str(self.options.get('output_name') or 'run')
     self.random_state = self.options.get('random_state')
     self.seed = self.options.get('seed')
-    self.repulsion_strength_wall = float(self.options.get('repulsion_strength_wall') or 1.0)
+    self.repulsion_strength_wall = float(self.options.get('repulsion_strength_wall') or 0.0)
     self.debye_length_wall = float(self.options.get('debye_length_wall') or 1.0)
     self.mobility_blobs_implementation = str(self.options.get('mobility_blobs_implementation') or 'python')
     self.mobility_vector_prod_implementation = str(self.options.get('mobility_vector_prod_implementation') or 'python')
@@ -82,11 +82,11 @@ class ReadInput(object):
     self.omega_one_roller = np.fromstring(self.options.get('omega_one_roller') or '0 0 0', sep=' ')
     self.free_kinematics = str(self.options.get('free_kinematics') or 'True')
     self.plot_velocity_field = np.fromstring(self.options.get('plot_velocity_field') or 'None', sep=' ')
-    self.green_particles = np.fromstring(self.options.get('green_particles') or '0 0', sep=' ', dtype=int)          
+    self.green_particles = np.fromstring(self.options.get('green_particles') or '0 0', sep=' ', dtype=int)
     self.cells = np.fromstring(self.options.get('cells') or '1 1', sep=' ', dtype=int)
     self.sample_HydroGrid = int(self.options.get('sample_HydroGrid') or 1)
     self.save_HydroGrid = int(self.options.get('save_HydroGrid') or 0)
-    self.hydro_interactions = int(self.options.get('hydro_interactions') or 1)    
+    self.hydro_interactions = int(self.options.get('hydro_interactions') or 1)
     self.update_PC = int(self.options.get('update_PC') or 1)
     self.domain = str(self.options.get('domain') or 'single_wall')
     self.call_HydroGrid = str(self.options.get('call_HydroGrid') or 'False') == 'True'
@@ -123,8 +123,8 @@ class ReadInput(object):
       tail = tail[:-7]
       self.articulated_ID.append(tail)
       self.articulated.append(structure_files)
-      
-    # Create structures ID for each kind 
+
+    # Create structures ID for each kind
     for struct in self.structures:
       # First, remove directory from structure name
       head, tail = ntpath.split(struct[1])

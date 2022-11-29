@@ -1,20 +1,20 @@
-# Select integrator 
+# Select integrator
 scheme                                   stochastic_GDC_RFD
 
 # Select implementation to compute M and M*f
 mobility_blobs_implementation            python
-mobility_vector_prod_implementation      numba
+mobility_vector_prod_implementation      pycuda
 
 # Select implementation to compute the blobs-blob interactions
-blob_blob_force_implementation           numba
+blob_blob_force_implementation           pycuda
 
 # Set time step, number of steps and save frequency
 dt                                       0.1
-n_steps                                  100
+n_steps                                  500
 n_save                                   1
 
 # Set fluid viscosity (eta), gravity (g) and blob radius
-eta                                      1.0 
+eta                                      1.0
 g                                        1.0
 blob_radius                              0.25
 
