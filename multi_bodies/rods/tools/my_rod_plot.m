@@ -128,8 +128,8 @@ for i = 1:skip:end_ind %1:skip:
     %use export fig here instead or change resolution from the -r300
     %command to maybe r200
     if print_pngs == 1
-        save_str = sprintf('../rods_pngs/rods%u_',Np);
-        print('-dpng',[save_str num2str(f) '.png'],'-r200')
+        save_str = sprintf('../rods_pngs/rodstest%u_',Np);
+        print('-dpng',[save_str num2str(f) '.png'],'-r100')
     end
 end
 
