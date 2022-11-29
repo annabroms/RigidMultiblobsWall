@@ -58,7 +58,7 @@ if not isExist:
 for c in concList:
     config = "random%u_L%1.2f" % (numPart,c)
     for dt in dtVec:
-        name = "dt%1.5f_L%1.2f_eta%1.2f" % (dt,c,eta)
+        name = "dt%1.5f_eta%1.2f" % (dt,eta)
         str = "%s/input_%s.dat" %(path,name)
         print(str)
 
