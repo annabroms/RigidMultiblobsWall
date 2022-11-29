@@ -28,7 +28,7 @@ numPart = 100
 
 #configList = ["random%u_L%1.2f_tol001" % (numPart,i) for i in [5, 2, 1, 0.5, 0.3]] # start configurations of different concenterations
 #concList = [5, 2, 1, 0.5, 0.3]
-concList = [5]
+concList = [2]
 
 folder = "dynamic_rods_T%u_N%u_conc" % (T,numPart)
 folder = "dynamic_rods_T%u_N%u_testcuda" % (T,numPart)
