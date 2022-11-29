@@ -13,7 +13,7 @@ import os
 steps = 1
 dtVec = np.logspace(-3,-1,steps)
 #dtVec = np.logspace(-2,-1,steps)
-T = 1 #NOT IN USE: final simulation time
+#T = 1 #NOT IN USE: final simulation time
 timeSteps = 200 # number of timesteps
 res = 1 # sets resolution for the rods, an intiger 1 2 3 4 with 4 the finest,
 #will affect the accuracy in a non-trivial manner
@@ -28,10 +28,11 @@ radius = radList[res-1]
 
 #numPart = 10 #number of particles in the simulation
 numPart = 100
+impl = "pycuda"
 
 #configList = ["random%u_L%1.2f_tol001" % (numPart,i) for i in [5, 2, 1, 0.5, 0.3]] # start configurations of different concenterations
 #concList = [5, 2, 1, 0.5, 0.3]
-concList = [1]
+concList = [2]
 
 #old folder names
 #folder = "dynamic_rods_T%u_N%u_conc" % (T,numPart)
@@ -55,7 +56,7 @@ if not isExist:
    print("The new data directory is created!")
 
 for c in concList:
-    config = "random%u_L%1.2f_eta%1.2f" % (numPart,c,eta)
+    config = "random%u_L%1.2f" % (numPart,c)
     for dt in dtVec:
         name = "dt%1.5f_L%1.2f_eta%1.2f" % (dt,c,eta)
         str = "%s/input_%s.dat" %(path,name)
@@ -74,7 +75,7 @@ for c in concList:
 
         f.write("# Select implementation to compute M and M*f\n")
         f.write("mobility_blobs_implementation\t\t\t\t python_no_wall\n")
-        f.write("mobility_vector_prod_implementation\t\t\t\t numba_no_wall\n\n")
+        f.write("mobility_vector_prod_implementation\t\t\t\t %s_no_wall\n\n" % impl)
 
         f.write("# Select implementation to compute the blobs-blob interactions\n")
         f.write("blob_blob_force_implementation\t\t\t\t None\n\n")
