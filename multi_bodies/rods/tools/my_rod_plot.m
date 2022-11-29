@@ -100,8 +100,10 @@ for i = 1:skip:end_ind %1:skip:
 
     hold off
     
+    %use export fig here instead or change resolution from the -r300
+    %command to maybe r200
     if print_pngs == 1
-        print('-dpng',['../rods_pngs/rods_' num2str(f) '.png'],'-r100')
+        print('-dpng',['../rods_pngs/rods_' num2str(f) '.png'],'-r300')
     end
 end
 
