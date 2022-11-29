@@ -11,9 +11,10 @@ import os
 
 #write input files for dynamic simulation with different dt
 steps = 1
-dtVec = np.logspace(-3,-1,steps)
+#dtVec = np.logspace(-3,-1,steps)
+dtVec = np.logspace(-2,-1,steps)
 T = 1 #final simulation time
-res = 1 # sets resolution for the rods, an intiger 1 2 3 4 with 4 the finest,
+res = 4 # sets resolution for the rods, an intiger 1 2 3 4 with 4 the finest,
 #will affect the accuracy in a non-trivial manner
 eta = 1.0 #viscosity
 g = 0.0 #gravity

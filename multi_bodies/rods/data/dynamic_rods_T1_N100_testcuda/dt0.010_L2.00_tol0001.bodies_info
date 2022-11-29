@@ -1,0 +1,5 @@
+num_of_body_types  1
+body_names         ['random100_L2.00_tol0001']
+body_types         [100]
+num_bodies         100
+num_blobs          42000
