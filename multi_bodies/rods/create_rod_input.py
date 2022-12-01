@@ -41,7 +41,7 @@ concList = [5, 2, 1, 0.5, 0.3]
 
 folder = "dynamic_rods_N%u_conc" % (numPart)
 folder = "dynamic_rods_N%u" % numPart
-folder = "dynamic_rods_N%u_conc" % numPart
+#folder = "dynamic_rods_N%u_conc" % numPart
 path = "input_%s" %folder
 isExist = os.path.exists(path)
 if not isExist:
