@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import math
+import tikzplotlib
 # import scipy
 import sys
 sys.path.append('../quaternion_integrator')
@@ -56,17 +57,20 @@ def readOrientations(f,numPart):
 #steps = 5 #number of different runs to collect statistics from. Could be a single
 steps = 1
 #one with many steps (10^5 at least) as we anyhow subdivide the interval
-dtVec = np.logspace(-3,0,steps)
+dtVec = np.logspace(-4,0,steps)
+dtVec = np.logspace(-6,0,steps)
 #steps = 3
 #dtVec = np.logspace(-3,-1,steps)
 
 eta = 1
-numPart = 10 #number of particles in the simulation
+numPart = 1 #number of particles in the simulation
 res = 1 # sets resolution for the rods, an intiger 1 2 3 4 with 4 the finest,
 save_freq = 1 #save frequency: 1 means that every time step is saved.
 ar = 20
 
-mob_r = 14.434758355589102
+mob_r = 14.434758355589102 #for the qbx particle
+mobVec = [14.576095945261537,14.404657971291515, 14.458404941747011,14.430435295093176]
+mob_r = mobVec[res-1]
 #mob_r = 14.434758355589102*8*math.pi
 #mob_r = 2*mob_r #testing
 Dr = mob_r/eta #assuming kbt = 1, double check the scaling with eta
@@ -74,17 +78,34 @@ Dr = mob_r/eta #assuming kbt = 1, double check the scaling with eta
 
 # folder= "rods/data/dynamic_rods_N%u_conc2" % (numPart)
 folder = "rods/data/dynamic_rods_N%u_conc_eta1" % (numPart)
-#folder = "rods/data/dynamic_rods_N%u" % (numPart)
+folder = "rods/data/dynamic_rods_N%u" % (numPart)
+folder = "rods/data/dynamic_rods_N%usmallersmaller" % (numPart)
 
 #folder = "rods/data/dynamic_rods_N%u_conc" % (numPart)
 
 freqList = range(1,100)
+#freqList = [range(1,21) 30:10:100 100:100:1000 1000:1000:50000]
+#freqList = [list(range(1,21)) list(range(30,100,10)) list(range(100,1000,100)), list(range(1000,50000,1000))]
+#freqList = [range(1,21), range(30,100,10),range(100,1000,100),range(1000,50000,1000)]
+freqList = []
+for i in range(1,21):
+    freqList.append(i)
+for i in range(30,100,10):
+    freqList.append(i)
+for i in range(100,1000,100):
+    freqList.append(i)
+for i in range(1000,50000,1000):
+    freqList.append(i)
+print(freqList)
+
+#freqList.append([30 + 10*k] for k in range(7))
 #freqList = range(1,10)
 #freqList = range(1,30)
 #freqList = [1,10]
-N = 1000 #number of steps taken with dt in each file
+N = 100000 #number of steps taken with dt in each file
 #N = 500
 #N = 4
+figName = 'single_smallersmaller'
 
 
 config = "random%u" % numPart #later - we want to loop over configurations here with different concentrations.
@@ -118,11 +139,20 @@ for c in configList:
         # extract, from the same file, also multiples of the time_step
                         #read files
         print(dt)
-        name = "dt%1.5f_eta%1.2f" % (dt,eta)
+        if dt<1e-5:
+            name = "dt%1.6f_eta%1.2f" % (dt,eta)
+        else:
+            name = "dt%1.5f_eta%1.2f" % (dt,eta)
+        print(name)
+        print(folder)
         fileName = "%s/%s.%s_%s" %(folder,name,config,c)
+        if numPart == 1:
+            print("Single particle only")
+            fileName = "%s/%s.single" %(folder,name)
 
         #loop over the N steps to colleect orientations
         orientList = np.zeros(shape=(N+1,numPart, 3))
+        print(fileName)
         for i in range(N+1):
             stepName = "%s.%.8u.clones" % (fileName,i) #extract time-steps with the specified frequency
 
@@ -132,8 +162,10 @@ for c in configList:
             f.close()
 
         #now, use the data to collect correlations
+        k = 1
         for s in freqList:
             #loop over time-steps
+
             St = 0
             MS = 0
             for i in range(N-s+1):
@@ -143,24 +175,22 @@ for c in configList:
                 #print(np.shape(np.linalg.norm(orientList[i+s,:,:]-orientList[i,:,:],axis=1)))
 
                 MS = MS + sum(np.linalg.norm(orientList[i+s,:,:]-orientList[i,:,:],axis=1)**2)
-            # print("get right index" )
-            # print(s-1)
-            # print()
-            # print(s-1+count*np.size(freqList))
-            S[0,s-1+count*np.size(freqList)] = St/((N-s)*numPart)
-            MSAD[0,s-1+count*np.size(freqList)] = MS/((N-s)*numPart) #computes mean squared
 
+            S[0,k-1+count*np.size(freqList)] = St/((N-s)*numPart)
+            print(N-s)
+            MSAD[0,k-1+count*np.size(freqList)] = MS/((N-s)*numPart) #computes mean squared
+            k = k+1
             print("start different time-step")
 
             #print(S)
         #print(S)
         count=count+1
-        dtVecLarge.append(dt*freqList)
+        dtVecLarge.append(dt*np.array(freqList))
 
     #S = S[np.abs(S)>1e-8,:]
     dtVecLarge = np.array(dtVecLarge).flatten()
     #print(dtVecLarge)
-    #print(S)
+    print(S)
     #
     #dtVecLarge = dtVecLarge[dtVecLarge>0]
     #print(dtVecLarge.reshape((1)))
@@ -176,35 +206,56 @@ for c in configList:
 
     plt.figure(3)
     plt.semilogx(dtVecLarge,MSAD.transpose(),'b.-')
-    plt.semilogx(dtVecLarge,2-2*S.transpose(),'r+-')
+    #plt.semilogx(dtVecLarge,2-2*S.transpose(),'r+-') #for debugging
     plt.semilogx(dtVecLarge,2*np.ones(np.shape(dtVecLarge)),'k--')
 
 
 plt.figure(2)
 plt.ylabel('MAD')
 plt.xlabel('dt')
+plt.semilogx(dtVecLarge,(math.pi/2)*np.ones(np.shape(dtVecLarge)),'k--')
+tikzplotlib.save("rods/figures/MAD%s.tex" %figName)
 #plt.show()
 
 plt.figure(1)
-plt.ylabel('S')
+plt.ylabel('Orientational correlation function')
 plt.xlabel('dt')
 plt.semilogx(dtVecLarge,np.exp(-2*Dr*dtVecLarge))
-
+Sp = S[S>0]
+(ind0,ind1) = np.where(S<0) #cannot take log of negative values
+print(ind1)
+if not np.size(ind1):
+    endInd = np.size(dtVecLarge)
+else:
+    endInd = ind1[0]-2
+print(np.log(S[:,0:endInd]))
+p = np.polyfit(dtVecLarge[0:endInd],np.log(S[:,0:endInd]).transpose(),1)
+print(p)
+errInt = p[1]
+errD = (-p[0]/2-Dr)/Dr
+plt.title("relative error in Dr: %f, in intersept %f" % (errD,errInt))
+tikzplotlib.save("rods/figures/orient%s.tex" %figName)
 
 plt.figure(3)
 plt.ylabel('MSAD')
 plt.xlabel('dt')
+tikzplotlib.save("rods/figures/MSAD%s.tex" %figName)
 
 plt.figure(4)
 endInd = 10
-print(MSAD[:,0:endInd])
-print(dtVecLarge[0:endInd])
+
 plt.plot(dtVecLarge[0:endInd],MSAD[:,0:endInd].transpose(),'b.-')
 plt.plot(dtVecLarge[0:endInd],4*Dr*dtVecLarge[0:endInd],'c.-')
 p = np.polyfit(dtVecLarge[0:endInd],MSAD[:,0:endInd].transpose(),1)
 print(p)
+print(4*Dr)
+errD = (Dr-p[0]/4)/Dr
+plt.title("relative error in Dr: %f" % errD)
+tikzplotlib.save("rods/figures/short_term%s.tex" %figName)
 
-plt.figure()
+# Check that Im looking at sufficiently small dt
+plt.figure(5)
 plt.plot(dtVecLarge[0:endInd],dtVecLarge[0:endInd]*Dr)
+plt.title("sufficiently small dt?")
 
 plt.show()

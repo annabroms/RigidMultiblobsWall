@@ -10,11 +10,11 @@ import numpy as np
 import os
 
 #write input files for dynamic simulation with different dt
-steps = 2
-dtVec = np.logspace(-3,-1,steps)
+steps = 1
+dtVec = np.logspace(-4,-1,steps)
 #dtVec = np.logspace(-2,-1,steps)
 #T = 1 #NOT IN USE: final simulation time
-timeSteps = 1000  # number of timesteps
+timeSteps = 10000  # number of timesteps
 res = 1 # sets resolution for the rods, an intiger 1 2 3 4 with 4 the finest,
 #will affect the accuracy in a non-trivial manner
 eta = 1.0 #viscosity
@@ -32,7 +32,7 @@ impl = "numba"
 
 #configList = ["random%u_L%1.2f_tol001" % (numPart,i) for i in [5, 2, 1, 0.5, 0.3]] # start configurations of different concenterations
 concList = [5, 2, 1, 0.5, 0.3]
-#concList = [2]
+concList = [2]
 
 #old folder names
 #folder = "dynamic_rods_T%u_N%u_conc" % (T,numPart)
@@ -81,7 +81,7 @@ for c in concList:
         f.write("# Select implementation to compute the blobs-blob interactions\n")
         f.write("blob_blob_force_implementation\t\t\t\t None\n\n")
 
-        f.write("body_body_force_torque_implementation\t\t\t\t python\n\n")
+        f.write("body_body_force_torque_implementation\t\t\t\t None \n\n") # change here if we have a force /torque
 
         f.write("# Set time step, number of steps and save frequency\n")
         f.write("dt\t\t\t\t %f\n" % dt)
