@@ -57,8 +57,8 @@ def readOrientations(f,numPart):
 #steps = 5 #number of different runs to collect statistics from. Could be a single
 steps = 1
 #one with many steps (10^5 at least) as we anyhow subdivide the interval
-dtVec = np.logspace(-4,0,steps)
-dtVec = np.logspace(-6,0,steps)
+dtVec = np.logspace(-5,0,steps)
+#dtVec = np.logspace(-6,0,steps)
 #steps = 3
 #dtVec = np.logspace(-3,-1,steps)
 
@@ -79,7 +79,7 @@ Dr = mob_r/eta #assuming kbt = 1, double check the scaling with eta
 # folder= "rods/data/dynamic_rods_N%u_conc2" % (numPart)
 folder = "rods/data/dynamic_rods_N%u_conc_eta1" % (numPart)
 folder = "rods/data/dynamic_rods_N%u" % (numPart)
-folder = "rods/data/dynamic_rods_N%usmallersmaller" % (numPart)
+folder = "rods/data/dynamic_rods_N%usmaller" % (numPart)
 
 #folder = "rods/data/dynamic_rods_N%u_conc" % (numPart)
 
@@ -103,10 +103,12 @@ print(freqList)
 #freqList = range(1,30)
 #freqList = [1,10]
 N = 100000 #number of steps taken with dt in each file
+NN = 150000 #test
+#NN = N
 #N = 500
 #N = 4
-figName = 'single_smallersmaller'
-
+figName = 'single_smallerb'
+#figName = 'single_smaller'
 
 config = "random%u" % numPart #later - we want to loop over configurations here with different concentrations.
 # We can do this as a for-loop over different concentrations.
@@ -151,9 +153,9 @@ for c in configList:
             fileName = "%s/%s.single" %(folder,name)
 
         #loop over the N steps to colleect orientations
-        orientList = np.zeros(shape=(N+1,numPart, 3))
+        orientList = np.zeros(shape=(NN+1,numPart, 3))
         print(fileName)
-        for i in range(N+1):
+        for i in range(NN+1):
             stepName = "%s.%.8u.clones" % (fileName,i) #extract time-steps with the specified frequency
 
             f=open(stepName,"r")
@@ -168,7 +170,9 @@ for c in configList:
 
             St = 0
             MS = 0
-            for i in range(N-s+1):
+            #N = NN-s
+
+            for i in range(N+1):
                 #print(np.reshape(orientList[i,:,:],(numPart*3,1)))
                 #print(np.shape(orientList[i,:,:]))
                 St = St + np.dot(np.reshape(orientList[i,:,:],(1,numPart*3)),np.reshape(orientList[i+s,:,:],(numPart*3,1)))
@@ -176,9 +180,10 @@ for c in configList:
 
                 MS = MS + sum(np.linalg.norm(orientList[i+s,:,:]-orientList[i,:,:],axis=1)**2)
 
-            S[0,k-1+count*np.size(freqList)] = St/((N-s)*numPart)
-            print(N-s)
-            MSAD[0,k-1+count*np.size(freqList)] = MS/((N-s)*numPart) #computes mean squared
+            #S[0,k-1+count*np.size(freqList)] = St/((N-1)*numPart)
+            S[0,k-1+count*np.size(freqList)] = St/((N+1)*numPart)
+            print(N)
+            MSAD[0,k-1+count*np.size(freqList)] = MS/((N+1)*numPart) #computes mean squared
             k = k+1
             print("start different time-step")
 
