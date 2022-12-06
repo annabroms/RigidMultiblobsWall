@@ -49,7 +49,7 @@ def readOrientations(f,numPart):
             l.append(float(t))
             count = count + 1
 
-        print(count)
+        #print(count)
         q = Quaternion(np.array(l[3:])) #this is the quaternion for the particle. Now, turn it into a direction vector
         R = q.rotation_matrix()
         u = R[:,2]
@@ -66,9 +66,9 @@ def readAllOrientations(f,numSteps,numPart):
     orientList = np.zeros(shape=(numSteps+1,numPart, 3))
     for i in range(numSteps+1):
         s = f.readline()
-        print(s)
+        #print(s)
         for k in range(numPart):
-            print(k)
+            #print(k)
             s = f.readline()
             l = []
             for t in s.split():
@@ -111,7 +111,7 @@ if __name__ == '__main__':
     # folder= "rods/data/dynamic_rods_N%u_conc2" % (numPart)
     folder = "rods/data/dynamic_rods_N%u_conc_eta1" % (numPart)
     folder = "rods/data/dynamic_rods_N%u_one" % (numPart)
-    folder = "rods/data/dynamic_rods_N%u_1000_ST" % (numPart)
+    folder = "rods/data/dynamic_rods_N%u_1000" % (numPart)
 
     #folder = "rods/data/dynamic_rods_N%u_conc" % (numPart)
 
@@ -136,14 +136,14 @@ if __name__ == '__main__':
     #freqList = range(1,10)
     #freqList = range(1,30)
     #freqList = [1,10]
-    N = 100000 #number of steps taken with dt in each file
+    N = 1000 #number of steps taken with dt in each file
     #NN = 150000 #test
-    N = 1000
+    #N = 1000
     NN = N
     #NN = N
     #N = 500
     #N = 4
-    figName = 'single_spikes2'
+    figName = 'RFD_auto'
     #figName = 'single_smaller'
 
     config = "random%u" % numPart #later - we want to loop over configurations here with different concentrations.
@@ -209,7 +209,7 @@ if __name__ == '__main__':
                 f = open(fullFileName,"r")
                 orientList = readAllOrientations(f,N,numPart)
                 f.close()
-            print(orientList)
+            #print(orientList)
             #now, use the data to collect correlations
             k = 1
             for s in freqList:
@@ -219,14 +219,20 @@ if __name__ == '__main__':
                 MS = 0
                 N = NN-s
 
-                for i in range(N+1):
-                    #print(np.reshape(orientList[i,:,:],(numPart*3,1)))
-                    #print(np.shape(orientList[i,:,:]))
-                    St = St + np.dot(np.reshape(orientList[i,:,:],(1,numPart*3)),np.reshape(orientList[i+s,:,:],(numPart*3,1)))
-                    #print(np.shape(np.linalg.norm(orientList[i+s,:,:]-orientList[i,:,:],axis=1)))
+                ind = np.array(list(range(N+1)))
 
-                    MS = MS + sum(np.linalg.norm(orientList[i+s,:,:]-orientList[i,:,:],axis=1)**2)
-
+                ## Have used a faster way of computing the following:
+                # for i in range(N+1):
+                #     #print(np.reshape(orientList[i,:,:],(numPart*3,1)))
+                #     #print(np.shape(orientList[i,:,:]))
+                #     St = St + np.dot(np.reshape(orientList[i,:,:],(1,numPart*3)),np.reshape(orientList[i+s,:,:],(numPart*3,1)))
+                #     #print(np.shape(np.linalg.norm(orientList[i+s,:,:]-orientList[i,:,:],axis=1)))
+                #
+                #     MS = MS + sum(np.linalg.norm(orientList[i+s,:,:]-orientList[i,:,:],axis=1)**2)
+                MS = sum(sum(np.linalg.norm(orientList[ind+s,:,:]-orientList[ind,:,:],axis=1)**2))
+                St = np.dot(np.reshape(orientList[ind,:,:],(1,numPart*3*(N+1))),np.reshape(orientList[ind+s,:,:],((N+1)*numPart*3,1)))
+                #print(np.abs(St-St2))
+                #print(np.abs(MS-MS2))
                 #S[0,k-1+count*np.size(freqList)] = St/((N-1)*numPart)
                 S[0,k-1+count*np.size(freqList)] = St/((N+1)*numPart)
                 print(N)
@@ -268,7 +274,7 @@ if __name__ == '__main__':
     plt.semilogx(dtVecLarge,(math.pi/2)*np.ones(np.shape(dtVecLarge)),'k--')
     tikzplotlib.save("rods/figures/MAD%s.tex" %figName)
     #plt.show()
-
+#################################################################################
     plt.figure(1)
     plt.ylabel('Orientational correlation function')
     plt.xlabel('dt')
@@ -287,7 +293,19 @@ if __name__ == '__main__':
     errD = (-p[0]/2-Dr)/Dr
     plt.title("relative error in Dr: %f, in intersept %f" % (errD,errInt))
     tikzplotlib.save("rods/figures/orient%s.tex" %figName)
-
+#################################################################
+    plt.figure(6)
+    plt.ylabel("absolute error in autocorrelation")
+    plt.xlabel('dt')
+    plt.loglog(dtVecLarge[0:endInd],np.abs(np.exp(-2*Dr*dtVecLarge[0:endInd])-S[0,0:endInd]),'.-')
+    tikzplotlib.save("rods/figures/abserr%s.tex" %figName)
+#################################################################
+    plt.figure(7)
+    plt.ylabel("relative error in autocorrelation")
+    plt.xlabel('dt')
+    plt.loglog(dtVecLarge[0:endInd],np.divide(np.abs(np.exp(-2*Dr*dtVecLarge[0:endInd])-S[0,0:endInd]),np.exp(-2*Dr*dtVecLarge[0:endInd])),'.-')
+    tikzplotlib.save("rods/figures/relerr%s.tex" %figName)
+######################################################
     plt.figure(3)
     plt.ylabel('MSAD')
     plt.xlabel('dt')
