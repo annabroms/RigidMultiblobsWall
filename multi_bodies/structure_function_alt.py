@@ -44,58 +44,90 @@ def readOrientations(f,numPart):
         s = f.readline()
         l = s.split() #these are still strings
         l = []
+        count = 0
         for t in s.split():
             l.append(float(t))
+            count = count + 1
+
+        print(count)
         q = Quaternion(np.array(l[3:])) #this is the quaternion for the particle. Now, turn it into a direction vector
         R = q.rotation_matrix()
         u = R[:,2]
+        #print(np.linalg.norm(u))
+        #if np.abs(np.linalg.norm(u)-1)>1e-14:
+        #    raise ValueError
+
         orient[i,:] = u
    # print(orient)
     return orient
+
+def readAllOrientations(f,numSteps,numPart):
+    orientList = np.zeros(shape=(NN+1,numPart, 3))
+    for i in range(numSteps):
+        s = f.readline()
+        print(s)
+        for k in range(numPart):
+            s = f.readline()
+            l = s.split() #these are still strings
+            l = []
+            count = 0
+            for t in s.split():
+                l.append(float(t))
+            q = Quaternion(np.array(l[3:])) #this is the quaternion for the particle. Now, turn it into a direction vector
+            R = q.rotation_matrix()
+            u = R[:,2]
+            orientList[i,k,:] = u
+    return orientList
+
+
 
 
 #steps = 5 #number of different runs to collect statistics from. Could be a single
 steps = 1
 #one with many steps (10^5 at least) as we anyhow subdivide the interval
-dtVec = np.logspace(-5,0,steps)
-#dtVec = np.logspace(-6,0,steps)
+dtVec = np.logspace(-3,0,steps)
+print(dtVec)
+#dtVec = np.logspace(-6,0,steps)6
 #steps = 3
 #dtVec = np.logspace(-3,-1,steps)
 
-eta = 1
-numPart = 1 #number of particles in the simulation
+
+eta = 10 #viscosity
+numPart = 100 #number of particles in the simulation
 res = 1 # sets resolution for the rods, an intiger 1 2 3 4 with 4 the finest,
 save_freq = 1 #save frequency: 1 means that every time step is saved.
-ar = 20
+ar = 20 # L/R for the particle
+single_file = 1 # Collect data from a single file (or alternatively from one file per time-step)
 
 mob_r = 14.434758355589102 #for the qbx particle
-mobVec = [14.576095945261537,14.404657971291515, 14.458404941747011,14.430435295093176]
+mobVec = [14.576095945261537,14.404657971291515, 14.458404941747011,14.430435295093176] #for different resolutions of the multiblob particle
 mob_r = mobVec[res-1]
-#mob_r = 14.434758355589102*8*math.pi
-#mob_r = 2*mob_r #testing
-Dr = mob_r/eta #assuming kbt = 1, double check the scaling with eta
+Dr = mob_r/eta #assuming kbt = 1
 
 
 # folder= "rods/data/dynamic_rods_N%u_conc2" % (numPart)
 folder = "rods/data/dynamic_rods_N%u_conc_eta1" % (numPart)
 folder = "rods/data/dynamic_rods_N%u" % (numPart)
-folder = "rods/data/dynamic_rods_N%usmaller" % (numPart)
+#folder = "rods/data/dynamic_rods_N%usmallersmaller_eta" % (numPart)
 
 #folder = "rods/data/dynamic_rods_N%u_conc" % (numPart)
 
+#Multiples of the simulation time step to investigate
 freqList = range(1,100)
 #freqList = [range(1,21) 30:10:100 100:100:1000 1000:1000:50000]
 #freqList = [list(range(1,21)) list(range(30,100,10)) list(range(100,1000,100)), list(range(1000,50000,1000))]
 #freqList = [range(1,21), range(30,100,10),range(100,1000,100),range(1000,50000,1000)]
 freqList = []
-for i in range(1,21):
+for i in range(1,100):
     freqList.append(i)
-for i in range(30,100,10):
-    freqList.append(i)
-for i in range(100,1000,100):
-    freqList.append(i)
-for i in range(1000,50000,1000):
-    freqList.append(i)
+# for i in range(30,100,10):
+#     freqList.append(i)
+# for i in range(100,1000,100):
+#     freqList.append(i)
+# for i in range(1000,50000,1000):
+#     freqList.append(i)
+#for i in range(1000,90000,1000):
+#    freqList.append(i)
 print(freqList)
 
 #freqList.append([30 + 10*k] for k in range(7))
@@ -104,13 +136,16 @@ print(freqList)
 #freqList = [1,10]
 N = 100000 #number of steps taken with dt in each file
 NN = 150000 #test
+N = 200
+NN = N
 #NN = N
 #N = 500
 #N = 4
-figName = 'single_smallerb'
+figName = 'single_smaller_eta'
 #figName = 'single_smaller'
 
 config = "random%u" % numPart #later - we want to loop over configurations here with different concentrations.
+
 # We can do this as a for-loop over different concentrations.
 configList = ["random10"]
 configList = ["L%1.2f" % (i) for i in [5, 2, 1, 0.5, 0.3]]
@@ -151,18 +186,25 @@ for c in configList:
         if numPart == 1:
             print("Single particle only")
             fileName = "%s/%s.single" %(folder,name)
+        if not single_file:
+            #loop over the N steps to colleect orientations
+            orientList = np.zeros(shape=(NN+1,numPart, 3))
+            print(fileName)
+            for i in range(NN+1):
+                stepName = "%s.%.8u.clones" % (fileName,i) #extract time-steps with the specified frequency
 
-        #loop over the N steps to colleect orientations
-        orientList = np.zeros(shape=(NN+1,numPart, 3))
-        print(fileName)
-        for i in range(NN+1):
-            stepName = "%s.%.8u.clones" % (fileName,i) #extract time-steps with the specified frequency
-
-            f=open(stepName,"r")
-            orientList[i,:,:] = readOrientations(f,numPart)
-            #read orientation vector for every particle, with every particle stored with a quaternion
+                f=open(stepName,"r")
+                orientList[i,:,:] = readOrientations(f,numPart)
+                #read orientation vector for every particle, with every particle stored with a quaternion
+                f.close()
+        else:
+            #read all orientations simultaneously
+            name = "%s/dt%1.5f_%s_eta%1.2f" % (folder,dt,c,eta)
+            fullFileName = "%s.%s_%s.config" % (name, config,c)
+            f = open(fullFileName,"r")
+            orientList = readAllOrientations(f,N,numPart)
             f.close()
-
+        print(orientList)
         #now, use the data to collect correlations
         k = 1
         for s in freqList:
@@ -170,7 +212,7 @@ for c in configList:
 
             St = 0
             MS = 0
-            #N = NN-s
+            N = NN-s
 
             for i in range(N+1):
                 #print(np.reshape(orientList[i,:,:],(numPart*3,1)))
