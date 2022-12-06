@@ -86,9 +86,9 @@ def readAllOrientations(f,numSteps,numPart):
 
 if __name__ == '__main__':
     #steps = 5 #number of different runs to collect statistics from. Could be a single
-    steps = 1
+    steps = 6
     #one with many steps (10^5 at least) as we anyhow subdivide the interval
-    dtVec = np.logspace(-4,0,steps)
+    dtVec = np.logspace(-5,0,steps)
     print(dtVec)
     #dtVec = np.logspace(-6,0,steps)
     #steps = 3
@@ -100,7 +100,7 @@ if __name__ == '__main__':
     res = 1 # sets resolution for the rods, an intiger 1 2 3 4 with 4 the finest,
     save_freq = 1 #save frequency: 1 means that every time step is saved.
     ar = 20 # L/R for the particle
-    single_file = 1 # Collect data from a single file (or alternatively from one file per time-step)
+    single_file = 0 # Collect data from a single file (or alternatively from one file per time-step)
 
     mob_r = 14.434758355589102 #for the qbx particle
     mobVec = [14.576095945261537,14.404657971291515, 14.458404941747011,14.430435295093176] #for different resolutions of the multiblob particle
@@ -111,7 +111,7 @@ if __name__ == '__main__':
     # folder= "rods/data/dynamic_rods_N%u_conc2" % (numPart)
     folder = "rods/data/dynamic_rods_N%u_conc_eta1" % (numPart)
     folder = "rods/data/dynamic_rods_N%u_one" % (numPart)
-    #folder = "rods/data/dynamic_rods_N%u_smallerST" % (numPart)
+    folder = "rods/data/dynamic_rods_N%u_1000_ST" % (numPart)
 
     #folder = "rods/data/dynamic_rods_N%u_conc" % (numPart)
 
@@ -121,16 +121,15 @@ if __name__ == '__main__':
     #freqList = [list(range(1,21)) list(range(30,100,10)) list(range(100,1000,100)), list(range(1000,50000,1000))]
     #freqList = [range(1,21), range(30,100,10),range(100,1000,100),range(1000,50000,1000)]
     freqList = []
-    for i in range(1,21):
+    for i in range(1,15):
         freqList.append(i)
-    for i in range(30,100,10):
-        freqList.append(i)
-    for i in range(100,1000,100):
-        freqList.append(i)
-    for i in range(1000,50000,1000):
-        freqList.append(i)
-    for i in range(1000,90000,1000):
-       freqList.append(i)
+    # for i in range(30,100,10):
+    #     freqList.append(i)
+    # for i in range(100,1000,100):
+    #     freqList.append(i)
+    # for i in range(1000,50000,1000):
+    #     freqList.append(i)
+
     print(freqList)
 
     #freqList.append([30 + 10*k] for k in range(7))
@@ -139,12 +138,12 @@ if __name__ == '__main__':
     #freqList = [1,10]
     N = 100000 #number of steps taken with dt in each file
     #NN = 150000 #test
-    #N = 100
+    N = 1000
     NN = N
     #NN = N
     #N = 500
     #N = 4
-    figName = 'single_smaller_eta'
+    figName = 'single_spikes2'
     #figName = 'single_smaller'
 
     config = "random%u" % numPart #later - we want to loop over configurations here with different concentrations.
