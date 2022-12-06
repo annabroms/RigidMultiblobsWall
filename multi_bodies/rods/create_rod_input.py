@@ -10,15 +10,15 @@ import numpy as np
 import os
 
 #write input files for dynamic simulation with different dt
-steps = 1
-dtVec = np.logspace(-4,-1,steps)
+steps = 6
+dtVec = np.logspace(-5,0,steps)
 #dtVec = np.logspace(-2,-1,steps)
 #T = 1 #NOT IN USE: final simulation time
-timeSteps = 10000  # number of timesteps
+timeSteps = 1000  # number of timesteps
 res = 1 # sets resolution for the rods, an intiger 1 2 3 4 with 4 the finest,
 #will affect the accuracy in a non-trivial manner
 eta = 1.0 #viscosity
-eta = 10 #just for testing
+#eta = 10 #just for testing
 g = 0.0 #gravity
 save_freq = 1 #save frequency: 1 means that every time step is saved.
 ar = 20
@@ -27,7 +27,7 @@ if ar==20:
 radius = radList[res-1]
 
 #numPart = 10 #number of particles in the simulation
-numPart = 10
+numPart = 1
 impl = "numba"
 
 #configList = ["random%u_L%1.2f_tol001" % (numPart,i) for i in [5, 2, 1, 0.5, 0.3]] # start configurations of different concenterations
@@ -41,6 +41,7 @@ concList = [2]
 
 folder = "dynamic_rods_N%u_conc" % (numPart)
 folder = "dynamic_rods_N%u" % numPart
+folder = "dynamic_rods_N%u_1000" % numPart
 #folder = "dynamic_rods_N%u_conc" % numPart
 path = "input_%s" %folder
 isExist = os.path.exists(path)
@@ -60,7 +61,10 @@ for c in concList:
     config = "random%u_L%1.2f" % (numPart,c)
     for dt in dtVec:
         name = "dt%1.5f_eta%1.2f" % (dt,eta)
-        str = "%s/input_%s_L%1.2f.dat" %(path,name,c)
+        if numPart == 1:
+            str = "%s/input_%s.dat" %(path,name)
+        else:
+            str = "%s/input_%s_L%1.2f.dat" %(path,name,c)
         print(str)
 
         #N = round(T/dt)
@@ -71,7 +75,8 @@ for c in concList:
         f = open(str, "w")
 
         f.write("# Select integrator\n")
-        f.write("scheme \t\t\t\t stochastic_GDC_RFD\n\n")
+#        f.write("scheme \t\t\t\t stochastic_GDC_RFD\n\n")
+        f.write("scheme \t\t\t\t stochastic_first_order_RFD_dense_algebra\n\n")
         #f.write("scheme \t\t\t\t deterministic_forward_euler\n\n")
 
         f.write("# Select implementation to compute M and M*f\n")
@@ -100,7 +105,10 @@ for c in concList:
         f.write("output_name\t\t\t\t rods/data/%s/%s\n\n" % (folder,name))
 
         f.write("# Load rigid bodies configuration, provide *.vertex and *.clones files\n")
-        f.write("structure rods/Structures/rt_optrod_aspect%u_res%u.vertex rods/Structures/%s.clones\n" %(ar,res,config))
+        if numPart == 1:
+            f.write("structure rods/Structures/rt_optrod_aspect%u_res%u.vertex rods/Structures/single.clones\n" %(ar,res))
+        else:
+            f.write("structure rods/Structures/rt_optrod_aspect%u_res%u.vertex rods/Structures/%s.clones\n" %(ar,res,config))
 
         f.close()
 

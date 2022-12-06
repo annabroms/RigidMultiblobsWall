@@ -1,0 +1,46 @@
+% This file was created with tikzplotlib v0.10.1.
+\begin{tikzpicture}
+
+\definecolor{darkgray176}{RGB}{176,176,176}
+\definecolor{darkturquoise0191191}{RGB}{0,191,191}
+
+\begin{axis}[
+tick align=outside,
+tick pos=left,
+title={relative error in Dr: -0.002712},
+x grid style={darkgray176},
+xmin=5.5e-07, xmax=1.045e-05,
+xtick style={color=black},
+y grid style={darkgray176},
+ymin=3.14717306448188e-05, ymax=0.00061011060982013,
+ytick style={color=black}
+]
+\addplot [semithick, blue, mark=*, mark size=3, mark options={solid}]
+table {%
+1e-06 5.77734978800602e-05
+2e-06 0.000115760238884634
+3e-06 0.000174417741124313
+4e-06 0.00023300485264417
+5e-06 0.00029136310325481
+6e-06 0.000349604381399376
+7e-06 0.000408176840105776
+8e-06 0.000466722614515633
+9e-06 0.000525290663099404
+1e-05 0.000583808842584889
+};
+\addplot [semithick, darkturquoise0191191, mark=*, mark size=3, mark options={solid}]
+table {%
+1e-06 5.83043837810461e-05
+2e-06 0.000116608767562092
+3e-06 0.000174913151343138
+4e-06 0.000233217535124185
+5e-06 0.000291521918905231
+6e-06 0.000349826302686277
+7e-06 0.000408130686467323
+8e-06 0.000466435070248369
+9e-06 0.000524739454029415
+1e-05 0.000583043837810461
+};
+\end{axis}
+
+\end{tikzpicture}
