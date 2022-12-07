@@ -10,11 +10,11 @@ import numpy as np
 import os
 
 #write input files for dynamic simulation with different dt
-steps = 6
-dtVec = np.logspace(-5,0,steps)
+steps = 1
+dtVec = np.logspace(-4,0,steps)
 #dtVec = np.logspace(-2,-1,steps)
 #T = 1 #NOT IN USE: final simulation time
-timeSteps = 1000  # number of timesteps
+timeSteps = 1000000  # number of timesteps
 res = 1 # sets resolution for the rods, an intiger 1 2 3 4 with 4 the finest,
 #will affect the accuracy in a non-trivial manner
 eta = 1.0 #viscosity
@@ -27,12 +27,12 @@ if ar==20:
 radius = radList[res-1]
 
 #numPart = 10 #number of particles in the simulation
-numPart = 1
+numPart = 10
 impl = "numba"
 
 #configList = ["random%u_L%1.2f_tol001" % (numPart,i) for i in [5, 2, 1, 0.5, 0.3]] # start configurations of different concenterations
 concList = [5, 2, 1, 0.5, 0.3]
-concList = [2]
+concList = [5]
 
 #old folder names
 #folder = "dynamic_rods_T%u_N%u_conc" % (T,numPart)
@@ -41,7 +41,7 @@ concList = [2]
 
 folder = "dynamic_rods_N%u_conc" % (numPart)
 folder = "dynamic_rods_N%u" % numPart
-folder = "dynamic_rods_N%u_1000" % numPart
+#folder = "dynamic_rods_N%u_1000" % numPart
 #folder = "dynamic_rods_N%u_conc" % numPart
 path = "input_%s" %folder
 isExist = os.path.exists(path)
@@ -75,8 +75,8 @@ for c in concList:
         f = open(str, "w")
 
         f.write("# Select integrator\n")
-#        f.write("scheme \t\t\t\t stochastic_GDC_RFD\n\n")
-        f.write("scheme \t\t\t\t stochastic_first_order_RFD_dense_algebra\n\n")
+        f.write("scheme \t\t\t\t stochastic_GDC_RFD\n\n")
+        #f.write("scheme \t\t\t\t stochastic_first_order_RFD_dense_algebra\n\n")
         #f.write("scheme \t\t\t\t deterministic_forward_euler\n\n")
 
         f.write("# Select implementation to compute M and M*f\n")
@@ -92,7 +92,7 @@ for c in concList:
         f.write("dt\t\t\t\t %f\n" % dt)
         f.write("n_steps\t\t\t\t%u\n" %N)
         f.write("n_save \t\t\t\t %u\n"% save_freq)
-        #f.write("save_clones \t\t\t\t one_file\n\n")
+        f.write("save_clones \t\t\t\t one_file\n\n")
 
         f.write("domain\t\t\t\t no_wall\n\n")
 
