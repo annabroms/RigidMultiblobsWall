@@ -1045,6 +1045,7 @@ if __name__ == '__main__':
 
   # Save random generator state
   with open(output_name + '.random_state', 'wb') as f:
+    print(np.random.get_state())
     cpickle.dump(np.random.get_state(), f)
 
   # Create rigid bodies
