@@ -1,4 +1,0 @@
-invalid_configuration_count    = 0
-deterministic_iterations_count = 100000
-stochastic_iterations_count    = 300000
-nonlinear_iterations_count     = 0

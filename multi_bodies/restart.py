@@ -12,4 +12,4 @@ folder = 'dynamic_rods_N10'
 
 #How to count the steps taken?
 
-#Maybe it could also be good to be able to clean data
+#Maybe it could also be good to be able to clean data, i.e. to remove the last N time-steps
