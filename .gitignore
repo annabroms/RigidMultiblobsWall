@@ -27,3 +27,4 @@
 # Exclude some folders #
 ########################
 .vs/
+multi_bodies/rods/data
