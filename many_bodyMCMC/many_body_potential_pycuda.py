@@ -1,9 +1,11 @@
 
 import numpy as np
+print("import potential")
 import pycuda.driver as cuda
 import pycuda.autoinit
 from pycuda.compiler import SourceModule
 
+print("import potential")
 
 mod = SourceModule("""
 #include <stdio.h>
@@ -12,13 +14,13 @@ mod = SourceModule("""
   Cumpute the enery coming from one blob potentials,
   e.g. gravity or interactions with the wall.
 */
-__device__ void one_blob_potential(double &u, 
-                                   const double rx, 
-                                   const double ry, 
-                                   const double rz, 
-                                   const double blob_radius, 
-                                   const double debye_length_wall, 
-                                   const double eps_wall, 
+__device__ void one_blob_potential(double &u,
+                                   const double rx,
+                                   const double ry,
+                                   const double rz,
+                                   const double blob_radius,
+                                   const double debye_length_wall,
+                                   const double eps_wall,
                                    const double weight){
   // Add gravity
   u += weight * rz;
@@ -44,7 +46,7 @@ __device__ void blob_blob_potential(double &u,
                                     const int j,
                                     const double debye_length,
                                     const double eps,
-                                    const double blob_radius){                
+                                    const double blob_radius){
   if(i != j){
     double r = sqrt(rx*rx + ry*ry + rz*rz);
     if(r < 2.0*blob_radius){
@@ -62,7 +64,7 @@ __device__ void blob_blob_potential(double &u,
   single blob and two blobs contributions.
 */
 __global__ void potential_from_position_blobs(const double *x,
-                                              double *total_U, 
+                                              double *total_U,
                                               const int n_blobs,
                                               const double Lx,
                                               const double Ly,
@@ -73,26 +75,26 @@ __global__ void potential_from_position_blobs(const double *x,
                                               const double weight,
                                               const double blob_radius){
 
-  
+
   int i = blockDim.x * blockIdx.x + threadIdx.x;
-  if(i >= n_blobs) return;   
+  if(i >= n_blobs) return;
 
   double u = 0.0;
   double rx, ry, rz;
   int NDIM = 3; // 3 is the spatial dimension
-  int ioffset = i * NDIM; 
+  int ioffset = i * NDIM;
   int joffset;
-  
+
   if (x[ioffset+2] > 0){
     // 1. One blob potential
     one_blob_potential(u, x[ioffset], x[ioffset+1], x[ioffset+2], blob_radius, debye_length_wall, eps_wall, weight);
 
     // 2. Two blobs potential
-    // IMPORTANT, we don't want to compute the blob-blob interaction twice! 
+    // IMPORTANT, we don't want to compute the blob-blob interaction twice!
     // See the loop limits.
     for(int j=i+1; j<n_blobs; j++){
       joffset = j * NDIM;
-      // Compute vector between particles i and j    
+      // Compute vector between particles i and j
       rx = x[ioffset    ] - x[joffset    ];
       ry = x[ioffset + 1] - x[joffset + 1];
       rz = x[ioffset + 2] - x[joffset + 2];
@@ -110,7 +112,7 @@ __global__ void potential_from_position_blobs(const double *x,
   {
     // make u large for blobs behind the wall
     // if a particle starts out of bounds somehow, then it won't want to move further out
-    u = 1e+05*(-x[ioffset+2] +1); 
+    u = 1e+05*(-x[ioffset+2] +1);
   }
   //IF END
   //3. Save potential U_i
@@ -122,9 +124,9 @@ __global__ void potential_from_position_blobs(const double *x,
   Compute one body potentials.
   Default is zero.
 */
-__device__ void one_body_potential(double &u, 
-                                   const double rx, 
-                                   const double ry, 
+__device__ void one_body_potential(double &u,
+                                   const double rx,
+                                   const double ry,
                                    const double rz,
                                    const double q1,
                                    const double q2,
@@ -136,8 +138,8 @@ __device__ void one_body_potential(double &u,
 /*
   Compute body-body potentials. Default is zero.
 */
-__device__ void body_body_potential(double &u, 
-                                    const double rx, 
+__device__ void body_body_potential(double &u,
+                                    const double rx,
                                     const double ry,
                                     const double rz,
                                     const double q1i,
@@ -148,9 +150,9 @@ __device__ void body_body_potential(double &u,
                                     const double q2j,
                                     const double q3j,
                                     const double q4j,
-                                    const int i, 
+                                    const int i,
                                     const int j){
-  
+
   return;
 }
 
@@ -161,32 +163,32 @@ __device__ void body_body_potential(double &u,
 */
 __global__ void potential_from_position_bodies(const double *x,
                                                const double *q,
-                                               double *total_U, 
+                                               double *total_U,
                                                const int n_bodies,
                                                const double Lx,
                                                const double Ly){
 
-  
+
   int i = blockDim.x * blockIdx.x + threadIdx.x;
-  if(i >= n_bodies) return;   
+  if(i >= n_bodies) return;
 
   double u = 0.0;
   double rx, ry, rz;
   int NDIM = 3; // 3 is the spatial dimension
-  int ioffset = i * NDIM; 
+  int ioffset = i * NDIM;
   int joffset;
-  
+
   {
     // 1. One body potential
     one_body_potential(u, x[ioffset], x[ioffset+1], x[ioffset+2],
                        q[i*4], q[i*4+1], q[i*4+2], q[i*4+3]);
 
     // 2. Two blobs potential
-    // IMPORTANT, we don't want to compute the body-body interaction twice! 
+    // IMPORTANT, we don't want to compute the body-body interaction twice!
     // See the loop limits.
     for(int j=i+1; j<n_bodies; j++){
       joffset = j * NDIM;
-      // Compute vector between particles i and j    
+      // Compute vector between particles i and j
       rx = x[ioffset    ] - x[joffset    ];
       ry = x[ioffset + 1] - x[joffset + 1];
       rz = x[ioffset + 2] - x[joffset + 2];
@@ -197,7 +199,7 @@ __global__ void potential_from_position_bodies(const double *x,
         ry = ry - int(ry / Ly + 0.5 * (int(ry>0) - int(ry<0))) * Ly;
       }
       // Compute blob-blob interaction
-      body_body_potential(u, rx, ry, rz, 
+      body_body_potential(u, rx, ry, rz,
                           q[i*4], q[i*4+1], q[i*4+2], q[i*4+3],
                           q[j*4], q[j*4+1], q[j*4+2], q[j*4+3],
                           i, j);
@@ -235,7 +237,7 @@ def blobs_potential(r_vectors, *args, **kwargs):
   '''
   This function compute the energy of the blobs.
   '''
-   
+
   # Determine number of threads and blocks for the GPU
   number_of_blobs = np.int32(len(r_vectors))
   threads_per_block, num_blocks = set_number_of_threads_and_blocks(number_of_blobs)
@@ -247,11 +249,11 @@ def blobs_potential(r_vectors, *args, **kwargs):
   debye_length = kwargs.get('debye_length')
   eps = kwargs.get('repulsion_strength')
   weight = kwargs.get('weight')
-  blob_radius = kwargs.get('blob_radius')  
+  blob_radius = kwargs.get('blob_radius')
 
   # Reshape arrays
   x = np.reshape(r_vectors, number_of_blobs * 3)
-        
+
   # Allocate CPU memory
   U = np.empty(number_of_blobs)
 
@@ -259,10 +261,10 @@ def blobs_potential(r_vectors, *args, **kwargs):
   utype = np.float64(1.)
   x_gpu = cuda.mem_alloc(x.nbytes)
   u_gpu = cuda.mem_alloc(U.nbytes)
-    
+
   # Copy data to the GPU (host to device)
   cuda.memcpy_htod(x_gpu, x)
-    
+
   # Get pair interaction function
   potential_from_position_blobs = mod.get_function("potential_from_position_blobs")
 
@@ -278,18 +280,18 @@ def blobs_potential(r_vectors, *args, **kwargs):
                                 np.float64(weight),
                                 np.float64(blob_radius),
                                 block=(threads_per_block, 1, 1),
-                                grid=(num_blocks, 1)) 
-    
+                                grid=(num_blocks, 1))
+
   # Copy data from GPU to CPU (device to host)
   cuda.memcpy_dtoh(U, u_gpu)
   return np.sum(U)
-  
+
 
 def bodies_potential(bodies, *args, **kwargs):
   '''
   This function compute the energy of the bodies.
   '''
-   
+
   # Determine number of threads and blocks for the GPU
   number_of_bodies = np.int32(len(bodies))
   threads_per_block, num_blocks = set_number_of_threads_and_blocks(number_of_bodies)
@@ -304,7 +306,7 @@ def bodies_potential(bodies, *args, **kwargs):
     x[k*3 : (k+1)*3] = b.location_new
     q[k*4] = b.orientation_new.s
     q[k*4 + 1 : k*4 + 4] = b.orientation_new.p
-    
+
   # Allocate CPU memory
   U = np.empty(number_of_bodies)
 
@@ -313,11 +315,11 @@ def bodies_potential(bodies, *args, **kwargs):
   x_gpu = cuda.mem_alloc(x.nbytes)
   q_gpu = cuda.mem_alloc(q.nbytes)
   u_gpu = cuda.mem_alloc(U.nbytes)
-    
+
   # Copy data to the GPU (host to device)
   cuda.memcpy_htod(x_gpu, x)
   cuda.memcpy_htod(q_gpu, q)
-    
+
   # Get pair interaction function
   potential_from_position_bodies = mod.get_function("potential_from_position_bodies")
 
@@ -327,8 +329,8 @@ def bodies_potential(bodies, *args, **kwargs):
                                  np.float64(periodic_length[0]),
                                  np.float64(periodic_length[1]),
                                  block=(threads_per_block, 1, 1),
-                                 grid=(num_blocks, 1)) 
-    
+                                 grid=(num_blocks, 1))
+
   # Copy data from GPU to CPU (device to host)
   cuda.memcpy_dtoh(U, u_gpu)
   return np.sum(U)
@@ -337,7 +339,7 @@ def bodies_potential(bodies, *args, **kwargs):
 def compute_total_energy(bodies, r_vectors, *args, **kwargs):
   '''
   It computes and returns the total energy of the system as
-  
+
   U = U_blobs + U_bodies
   '''
 

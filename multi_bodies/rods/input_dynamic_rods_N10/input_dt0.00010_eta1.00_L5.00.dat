@@ -8,7 +8,7 @@ mobility_vector_prod_implementation				 numba_no_wall
 # Select implementation to compute the blobs-blob interactions
 blob_blob_force_implementation				 None
 
-body_body_force_torque_implementation				 None 
+body_body_force_torque_implementation				 None
 
 # Set time step, number of steps and save frequency
 dt				 0.000100

@@ -1,0 +1,22 @@
+n_steps                     10000
+n_save                      100
+
+
+#kT                          1.0
+#g					                  1.0
+
+#debye_length				        1.0
+#repulsion_strength			    1.0
+#blob_radius                 0.25
+blob_radius				 0.0108388666434850
+
+
+blob_blob_force_implementation				 None
+domain				 no_wall
+
+
+save_clones                 one_file
+output_name                 run
+
+
+structure ../multi_bodies/rods/Structures/rt_optrod_aspect20_res1.vertex ../multi_bodies/rods/Structures/two.clones

@@ -17,12 +17,15 @@ found_functions = False
 path_to_append = ''
 while found_functions is False:
   try:
-    import many_body_potential_pycuda 
+    #import many_body_potential_pycuda
+    #from many_bodyMCMC import many_body_potential_pycuda
+    import potential_pycuda_user_defined
     from body import body
     from quaternion_integrator.quaternion import Quaternion
     from read_input import read_input
     from read_input import read_vertex_file, read_clones_file
     import general_application_utils as utils
+
     found_functions = True
   except ImportError:
     path_to_append += '../'
@@ -34,13 +37,17 @@ while found_functions is False:
 
 # Override many_body_potential_pycuda.py with user defined functions.
 # If potential_pycuda_user_defined.py does not exists nothing happens.
-potential_pycuda_user_defined = False
-if os.path.isfile('potential_pycuda_user_defined.py'):
-  potential_pycuda_user_defined = True
-if potential_pycuda_user_defined:
-  del sys.modules['many_body_potential_pycuda']
-  sys.modules['many_body_potential_pycuda'] = __import__('potential_pycuda_user_defined')
-  import many_body_potential_pycuda
+
+#Comment out this part if we cannot run on GPU
+
+# potential_pycuda_user_defined = False
+# if os.path.isfile('potential_pycuda_user_defined.py'):
+#   potential_pycuda_user_defined = True
+#   print("fetch my function")
+# if potential_pycuda_user_defined:
+#   del sys.modules['many_body_potential_pycuda']
+#   sys.modules['many_body_potential_pycuda'] = __import__('potential_pycuda_user_defined')
+#   import many_body_potential_pycuda
 
 def get_blobs_r_vectors(bodies, Nblobs):
   '''
@@ -67,7 +74,7 @@ def set_blob_potential(implementation):
   elif implementation == 'python':
     return calc_blob_potential_python
   elif implementation == 'C++':
-    return calc_blob_potential_boost 
+    return calc_blob_potential_boost
   elif implementation == 'pycuda':
     return many_body_potential_pycuda.calc_blob_potential_pycuda
 
@@ -75,13 +82,13 @@ def set_blob_potential(implementation):
 if __name__ == '__main__':
 
   # script takes input file as command line argument or default 'data.main'
-  if len(sys.argv) != 2: 
+  if len(sys.argv) != 2:
     input_file = 'data.main'
   else:
     input_file = sys.argv[1]
 
   # Read input file
-  read = read_input.ReadInput(input_file) 
+  read = read_input.ReadInput(input_file)
 
   # Copy input file to output
   subprocess.call(["cp", input_file, read.output_name + '.inputfile'])
@@ -92,7 +99,7 @@ if __name__ == '__main__':
       np.random.set_state(cpickle.load(f))
   elif read.seed is not None:
     np.random.seed(int(read.seed))
-  
+
   # Save random generator state
   with open(read.output_name + '.random_state', 'wb') as f:
     cpickle.dump(np.random.get_state(), f)
@@ -101,6 +108,7 @@ if __name__ == '__main__':
   blob_radius = read.blob_radius
   periodic_length = read.periodic_length
   max_translation = blob_radius * 0.1
+  max_translation = 0.01 #just to try
   weight = 1.0 * read.g
   kT = read.kT
 
@@ -123,6 +131,8 @@ if __name__ == '__main__':
         b.prescribed_kinematics = True
       bodies.append(b)
   bodies = np.array(bodies)
+  print("max body length")
+  print(max_body_length)
 
   # Set some more variables
   num_bodies = bodies.size
@@ -137,15 +147,26 @@ if __name__ == '__main__':
   # begin MCMC
   # get energy of the current state before jumping into the loop
   start_time = time.time()
-  current_state_energy = many_body_potential_pycuda.compute_total_energy(bodies,
-                                                                         sample_r_vectors,
-                                                                         periodic_length = periodic_length,
-                                                                         debye_length_wall = read.debye_length_wall,
-                                                                         repulsion_strength_wall = read.repulsion_strength_wall,
-                                                                         debye_length = read.debye_length,
-                                                                         repulsion_strength = read.repulsion_strength,
-                                                                         weight = weight,
-                                                                         blob_radius = blob_radius)
+  # current_state_energy = many_body_potential_pycuda.compute_total_energy(bodies,
+  #                                                                        sample_r_vectors,
+  #                                                                        periodic_length = periodic_length,
+  #                                                                        debye_length_wall = read.debye_length_wall,
+  #                                                                        repulsion_strength_wall = read.repulsion_strength_wall,
+  #                                                                        debye_length = read.debye_length,
+  #                                                                        repulsion_strength = read.repulsion_strength,
+  #                                                                        weight = weight,
+  #                                                                        blob_radius = blob_radius)
+  current_state_energy = potential_pycuda_user_defined.compute_total_energy(bodies,
+                                                                           sample_r_vectors,
+                                                                           periodic_length = periodic_length,
+                                                                           debye_length_wall = read.debye_length_wall,
+                                                                           repulsion_strength_wall = read.repulsion_strength_wall,
+                                                                           debye_length = read.debye_length,
+                                                                           repulsion_strength = read.repulsion_strength,
+                                                                           weight = weight,
+                                                                           blob_radius = blob_radius)
+
+
 
   # quaternion to be used for disturbing the orientation of each body
   quaternion_shift = Quaternion(np.array([1,0,0,0]))
@@ -169,7 +190,16 @@ if __name__ == '__main__':
       blob_index += body.Nblobs
 
     # calculate potential of proposed new state
-    sample_state_energy = many_body_potential_pycuda.compute_total_energy(bodies,
+    # sample_state_energy = many_body_potential_pycuda.compute_total_energy(bodies,
+    #                                                                       sample_r_vectors,
+    #                                                                       periodic_length = periodic_length,
+    #                                                                       debye_length_wall = read.debye_length_wall,
+    #                                                                       repulsion_strength_wall = read.repulsion_strength_wall,
+    #                                                                       debye_length = read.debye_length,
+    #                                                                       repulsion_strength = read.repulsion_strength,
+    #                                                                       weight = weight,
+    #                                                                       blob_radius = blob_radius)
+    sample_state_energy = potential_pycuda_user_defined.compute_total_energy(bodies,
                                                                           sample_r_vectors,
                                                                           periodic_length = periodic_length,
                                                                           debye_length_wall = read.debye_length_wall,
@@ -178,6 +208,8 @@ if __name__ == '__main__':
                                                                           repulsion_strength = read.repulsion_strength,
                                                                           weight = weight,
                                                                           blob_radius = blob_radius)
+
+    #print(np.exp(-(sample_state_energy - current_state_energy)))
 
     # accept or reject the sample state and collect data accordingly
     if np.random.uniform(0.0, 1.0) < np.exp(-(sample_state_energy - current_state_energy) / kT):
@@ -188,8 +220,8 @@ if __name__ == '__main__':
         body.location, body.orientation = body.location_new, body.orientation_new
     else:
       acceptance_ratio = acceptance_ratio * 0.95
-	
-    # Scale max_translation 
+
+    # Scale max_translation
     if step < 0 and step < read.initial_step // 2 and acceptance_ratio > 0.5:
       max_translation = max_translation * 1.02
       max_angle_shift = max_translation / max_body_length
@@ -210,12 +242,12 @@ if __name__ == '__main__':
             f_ID.write(str(body_types[i]) + '\n')
             for j in range(body_types[i]):
               orientation = bodies[body_offset + j].orientation.entries
-              f_ID.write('%s %s %s %s %s %s %s\n' % (bodies[body_offset + j].location[0], 
-                                                     bodies[body_offset + j].location[1], 
-                                                     bodies[body_offset + j].location[2], 
-                                                     orientation[0], 
-                                                     orientation[1], 
-                                                     orientation[2], 
+              f_ID.write('%s %s %s %s %s %s %s\n' % (bodies[body_offset + j].location[0],
+                                                     bodies[body_offset + j].location[1],
+                                                     bodies[body_offset + j].location[2],
+                                                     orientation[0],
+                                                     orientation[1],
+                                                     orientation[2],
                                                      orientation[3]))
             body_offset += body_types[i]
       elif read.save_clones == 'one_file':
@@ -229,12 +261,12 @@ if __name__ == '__main__':
             f_ID.write(str(body_types[i]) + '\n')
             for j in range(body_types[i]):
               orientation = bodies[body_offset + j].orientation.entries
-              f_ID.write('%s %s %s %s %s %s %s\n' % (bodies[body_offset + j].location[0], 
-                                                     bodies[body_offset + j].location[1], 
-                                                     bodies[body_offset + j].location[2], 
-                                                     orientation[0], 
-                                                     orientation[1], 
-                                                     orientation[2], 
+              f_ID.write('%s %s %s %s %s %s %s\n' % (bodies[body_offset + j].location[0],
+                                                     bodies[body_offset + j].location[1],
+                                                     bodies[body_offset + j].location[2],
+                                                     orientation[0],
+                                                     orientation[1],
+                                                     orientation[2],
                                                      orientation[3]))
             body_offset += body_types[i]
       else:
@@ -254,15 +286,15 @@ if __name__ == '__main__':
           f_ID.write(str(body_types[i]) + '\n')
           for j in range(body_types[i]):
             orientation = bodies[body_offset + j].orientation.entries
-            f_ID.write('%s %s %s %s %s %s %s\n' % (bodies[body_offset + j].location[0], 
-                                                   bodies[body_offset + j].location[1], 
-                                                   bodies[body_offset + j].location[2], 
-                                                   orientation[0], 
-                                                   orientation[1], 
-                                                   orientation[2], 
+            f_ID.write('%s %s %s %s %s %s %s\n' % (bodies[body_offset + j].location[0],
+                                                   bodies[body_offset + j].location[1],
+                                                   bodies[body_offset + j].location[2],
+                                                   orientation[0],
+                                                   orientation[1],
+                                                   orientation[2],
                                                    orientation[3]))
           body_offset += body_types[i]
-      
+
     elif read.save_clones == 'one_file':
       for i, ID in enumerate(read.structures_ID):
         name = read.output_name + '.' + ID + '.config'
@@ -274,12 +306,12 @@ if __name__ == '__main__':
           f_ID.write(str(body_types[i]) + '\n')
           for j in range(body_types[i]):
             orientation = bodies[body_offset + j].orientation.entries
-            f_ID.write('%s %s %s %s %s %s %s\n' % (bodies[body_offset + j].location[0], 
-                                                   bodies[body_offset + j].location[1], 
-                                                   bodies[body_offset + j].location[2], 
-                                                   orientation[0], 
-                                                   orientation[1], 
-                                                   orientation[2], 
+            f_ID.write('%s %s %s %s %s %s %s\n' % (bodies[body_offset + j].location[0],
+                                                   bodies[body_offset + j].location[1],
+                                                   bodies[body_offset + j].location[2],
+                                                   orientation[0],
+                                                   orientation[1],
+                                                   orientation[2],
                                                    orientation[3]))
           body_offset += body_types[i]
     else:
@@ -293,7 +325,7 @@ if __name__ == '__main__':
   print('accepted_moves = ', accepted_moves)
   print('Total time = ', end_time)
 
-  # Save wallclock time 
+  # Save wallclock time
   with open(read.output_name + '.time', 'w') as f:
     f.write(str(time.time() - start_time) + '\n')
   # Save acceptance ratio
@@ -302,4 +334,3 @@ if __name__ == '__main__':
     f.write('accepted_moves = ' +  str(accepted_moves) + '\n')
     f.write('final max_translation = ' +  str(max_translation) + '\n')
     f.write('final max_angle_shift = ' +  str(max_angle_shift) + '\n')
-  
