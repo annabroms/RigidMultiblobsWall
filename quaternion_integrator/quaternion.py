@@ -38,6 +38,11 @@ class Quaternion(object):
          + np.cross(self.p, other.p))
     return Quaternion(np.concatenate(([s], p)))
 
+  def getAsVector(self):
+      return np.concatenate(([self.s], self.p))
+
+
+
 
   def rotation_matrix(self):
     '''
@@ -68,6 +73,8 @@ class Quaternion(object):
     else:
       return Quaternion([0.0, 0.0, 0.0, 1.0])
 
+  # def __sqrt__(self):
+  #     return square_root(self)
 
   def rotation_angle(self):
     ''' Return 3 dimensional rotation angle that the quaternion represents. '''

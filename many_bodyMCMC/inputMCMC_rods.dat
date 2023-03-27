@@ -1,5 +1,5 @@
-n_steps                     10000
-n_save                      100
+n_steps                     1000000
+n_save                      1
 
 
 #kT                          1.0

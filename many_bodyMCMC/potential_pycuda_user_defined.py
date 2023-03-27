@@ -8,8 +8,8 @@ def HGO(x,q):
     #coord on the format [0 r,quaternion_i,quaternion_j
     # set parameters
     r = x[3:6]-x[0:3]
-    print("distance")
-    print(np.linalg.norm(r))
+    #print("distance")
+    #print(np.linalg.norm(r))
     quaternion_j = Quaternion(q[0:4]) #How to create a quaternion?
     quaternion_i = Quaternion(q[4:])
 
@@ -33,10 +33,10 @@ def HGO(x,q):
 
     term2 = (RuU1-RuU2)**2/(1-chi*(np.dot(u1,u2)))
     sigma = s*(1-0.5*chi*((RuU1+RuU2)**2/(1+chi*(np.dot(u1,u2)))+term2))**(-1/2)
-    print(chi)
-    print(sigma)
-    print(-np.linalg.norm(r)**2/(sigma**2))
-    print(np.linalg.norm(r)**2)
+    # print(chi)
+    # print(sigma)
+    # print(-np.linalg.norm(r)**2/(sigma**2))
+    # print(np.linalg.norm(r)**2)
     return epsilon*np.exp((-np.linalg.norm(r)**2)/(sigma**2))
 
 

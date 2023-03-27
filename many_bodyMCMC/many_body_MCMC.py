@@ -131,9 +131,7 @@ if __name__ == '__main__':
         b.prescribed_kinematics = True
       bodies.append(b)
   bodies = np.array(bodies)
-  print("max body length")
-  print(max_body_length)
-
+  
   # Set some more variables
   num_bodies = bodies.size
   Nblobs = sum([x.Nblobs for x in bodies])
