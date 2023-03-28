@@ -108,7 +108,7 @@ if __name__ == '__main__':
   blob_radius = read.blob_radius
   periodic_length = read.periodic_length
   max_translation = blob_radius * 0.1
-  max_translation = 1.3 #just to try
+  max_translation = 0.5 #just to try
   weight = 1.0 * read.g
   kT = read.kT
 
@@ -179,7 +179,7 @@ if __name__ == '__main__':
     for i, body in enumerate(bodies): # distrub bodies
       if body.prescribed_kinematics is False:
         body.location_new = body.location + np.random.uniform(-max_translation, max_translation, 3) # make small change to location
-        quaternion_shift = Quaternion.from_rotation(np.random.normal(0,1,3) * max_angle_shift) # why is this a wise choice? 
+        quaternion_shift = Quaternion.from_rotation(np.random.normal(0,1,3) * max_angle_shift) # why is this a wise choice?
         body.orientation_new = quaternion_shift * body.orientation
       else:
         body.location_new = body.location

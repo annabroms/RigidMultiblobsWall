@@ -8,7 +8,7 @@ def HGO(x,q):
     # set parameters
     r = x[3:6]-x[0:3]
     L = 0.5 # particle length
-    cut_off = 5*L
+    cut_off = 2*L
 
     if np.linalg.norm(r) < cut_off:
         #print("distance")
@@ -20,7 +20,7 @@ def HGO(x,q):
         a = 0.5
         #a = 0.2
         b = a/10 #perpendicular coeff
-        b = b*1.1
+        #b = b*1.1
         p = 20  #strength of the potential
         chi = (a**2-b**2)/(a**2+b**2)
         s = np.sqrt(2)*b
