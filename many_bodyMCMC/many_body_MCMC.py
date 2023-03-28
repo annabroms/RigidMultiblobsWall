@@ -179,7 +179,7 @@ if __name__ == '__main__':
     for i, body in enumerate(bodies): # distrub bodies
       if body.prescribed_kinematics is False:
         body.location_new = body.location + np.random.uniform(-max_translation, max_translation, 3) # make small change to location
-        quaternion_shift = Quaternion.from_rotation(np.random.normal(0,1,3) * max_angle_shift)
+        quaternion_shift = Quaternion.from_rotation(np.random.normal(0,1,3) * max_angle_shift) # why is this a wise choice? 
         body.orientation_new = quaternion_shift * body.orientation
       else:
         body.location_new = body.location
