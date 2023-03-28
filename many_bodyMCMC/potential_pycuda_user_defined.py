@@ -5,39 +5,46 @@ from quaternion_integrator.quaternion import Quaternion
 
 #def HGO(r,quaternion_i,quaternion_j):
 def HGO(x,q):
-    #coord on the format [0 r,quaternion_i,quaternion_j
     # set parameters
     r = x[3:6]-x[0:3]
-    #print("distance")
-    #print(np.linalg.norm(r))
-    quaternion_j = Quaternion(q[0:4]) #How to create a quaternion?
-    quaternion_i = Quaternion(q[4:])
+    L = 0.5 # particle length
+    cut_off = 5*L 
 
-    #a = 0.5 to start with
-    a = 0.5
-    b = a/10 #perpendicular coeff
-    p = 100  #strength of the potential
-    chi = (a**2-b**2)/(a**2+b**2)
-    s = np.sqrt(2)*b
+    if np.linalg.norm(r) < cut_off:
+        #print("distance")
+        #print(np.linalg.norm(r))
+        quaternion_j = Quaternion(q[0:4]) #How to create a quaternion?
+        quaternion_i = Quaternion(q[4:])
 
-    Ru = r/np.linalg.norm(r)
+        #a = 0.5 to start with
+        a = 0.5
+        #a = 0.2
+        b = a/10 #perpendicular coeff
+        p = 20  #strength of the potential
+        chi = (a**2-b**2)/(a**2+b**2)
+        s = np.sqrt(2)*b
 
-    R = quaternion_i.rotation_matrix()
-    u1 = R[:,2]
-    R = quaternion_j.rotation_matrix()
-    u2 = R[:,2]
-    epsilon = p*(1-chi**2*np.dot(u1,u2)**2)**(-1/2)
+        Ru = r/np.linalg.norm(r)
 
-    RuU1 = np.dot(Ru,u1)
-    RuU2 = np.dot(Ru,u2)
+        R = quaternion_i.rotation_matrix()
+        u1 = R[:,2]
+        R = quaternion_j.rotation_matrix()
+        u2 = R[:,2]
+        epsilon = p*(1-chi**2*np.dot(u1,u2)**2)**(-1/2)
 
-    term2 = (RuU1-RuU2)**2/(1-chi*(np.dot(u1,u2)))
-    sigma = s*(1-0.5*chi*((RuU1+RuU2)**2/(1+chi*(np.dot(u1,u2)))+term2))**(-1/2)
-    # print(chi)
-    # print(sigma)
-    # print(-np.linalg.norm(r)**2/(sigma**2))
-    # print(np.linalg.norm(r)**2)
-    return epsilon*np.exp((-np.linalg.norm(r)**2)/(sigma**2))
+        RuU1 = np.dot(Ru,u1)
+        RuU2 = np.dot(Ru,u2)
+
+        term2 = (RuU1-RuU2)**2/(1-chi*(np.dot(u1,u2)))
+        sigma = s*(1-0.5*chi*((RuU1+RuU2)**2/(1+chi*(np.dot(u1,u2)))+term2))**(-1/2)
+        # print(chi)
+        # print(sigma)
+        # print(-np.linalg.norm(r)**2/(sigma**2))
+        # print(np.linalg.norm(r)**2)
+        return epsilon*np.exp((-np.linalg.norm(r)**2)/(sigma**2))
+    else:
+        return float('inf')
+
 
 
 def compute_total_energy(bodies, r_vectors, *args, **kwargs):

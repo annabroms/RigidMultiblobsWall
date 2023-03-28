@@ -108,7 +108,7 @@ if __name__ == '__main__':
   blob_radius = read.blob_radius
   periodic_length = read.periodic_length
   max_translation = blob_radius * 0.1
-  max_translation = 0.01 #just to try
+  max_translation = 1.3 #just to try
   weight = 1.0 * read.g
   kT = read.kT
 
@@ -131,7 +131,7 @@ if __name__ == '__main__':
         b.prescribed_kinematics = True
       bodies.append(b)
   bodies = np.array(bodies)
-  
+
   # Set some more variables
   num_bodies = bodies.size
   Nblobs = sum([x.Nblobs for x in bodies])

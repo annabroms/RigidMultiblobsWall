@@ -272,7 +272,7 @@ def getAlpha(x1,x2):
 
 
 filename = "../../../many_bodyMCMC/run.two.config"
-numSteps = 1e6 # number of MCMC runs
+numSteps = 100000 # number of MCMC runs
 L = 0.5 #particle lenght
 R = 0.025
 
