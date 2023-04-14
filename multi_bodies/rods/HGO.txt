@@ -1,0 +1,29 @@
+import "algebra"
+import "potential"
+
+def hgo epsilon sigma_par sigma_ort (p, o) : f32 =
+    let sq a = a*a
+    let R = p
+    let R' = v3normalise R
+    let u1 = (0,0,1)
+    let u2 = rotateWith o u1
+    let sigma = f32.sqrt 2 * sigma_ort
+    let chi = (sq sigma_par - sq sigma_ort) / (sq sigma_par + sq sigma_ort)
+    let epsilon' = epsilon * f32.sqrt (1 - sq (chi * v3dot u1 u2))
+    let sigma' = sigma * f32.sqrt (1 - 0.5*chi * ( sq(v3dot R' u1 + v3dot R' u2) / (1+chi*v3dot u1 u2)
+                                                 + sq(v3dot R' u1 - v3dot R' u2) / (1-chi*v3dot u1 u2) ))
+    in epsilon' * f32.exp (-v3quad R / sq sigma')
+
+
+-----------------------
+Frågor:
+
+v3quad = \|R\|^2 ?
+
+let epsilon' = epsilon * f32.sqrt (1 - sq (chi * v3dot u1 u2))
+Skall vara 1/sqrt(            )
+
+
+let sigma' = sigma * f32.sqrt (1 - 0.5*chi * ( sq(v3dot R' u1 + v3dot R' u2) / (1+chi*v3dot u1 u2)
+                                             + sq(v3dot R' u1 - v3dot R' u2) / (1-chi*v3dot u1 u2) ))
+Skall även här vara 1/sqrt(                )

@@ -75,6 +75,11 @@ class Quaternion(object):
 
   # def __sqrt__(self):
   #     return square_root(self)
+  def gradToTourqueMatrix(self):
+      P = np.array([[0, -self.p[2], self.p[1]], [self.p[2], 0, -self.p[0]], [-self.p[1], self.p[0], 0]])
+      #psi = 0.5*np.array([[np.transpose(-self.p)],[self.s*np.identity(3)-P]])
+      psi = np.concatenate((np.transpose(-self.p).reshape(1,-1),self.s*np.identity(3)-P), axis=0)
+      return 0.5*np.transpose(psi)
 
   def rotation_angle(self):
     ''' Return 3 dimensional rotation angle that the quaternion represents. '''

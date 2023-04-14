@@ -4,12 +4,26 @@ import math
 from multiprocessing import Pool # for file processing in parallel
 #from numpy import quaternion
 from scipy.stats import ks_2samp
-
 import sys
-sys.path.append('../../../quaternion_integrator')
+import os
 
+
+#from ../../../many_bodyMCMC
+
+
+
+#
+sys.path.append('../../../quaternion_integrator')
+#sys.path.append('../quaternion_integrator')
+# print(os.getcwd())
 from quaternion import Quaternion
+
+#from ...quaternion_integrator.quaternion import Quaternion
 #from quaternion_integrator.quaternion import Quaternion
+sys.path.append('../../../many_bodyMCMC')
+import potential_pycuda_user_defined
+#from many_bodyMCMC import potential_pycuda_user_defined
+
 
 def centerDist(x1,x2):
     " Center center distance for the particles"
@@ -83,8 +97,6 @@ def rotate_quaternion(q1, q2, x2):
     return Quaternion(np.concatenate(([q2[0]],q2_rotated)))
 
 
-
-import numpy as np
 
 def distance(p1, q1, p2, q2):
     """
@@ -262,6 +274,10 @@ def angle_between_vectors(a, b):
 
     return angle
 
+def getPotential(x1,x2,q1,q2):
+    return potential_pycuda_user_defined.HGO(np.concatenate((x1,x2,q1,q2)))
+
+
 def getAlpha(x1,x2):
     #translate system
     x2_temp = x2-x1
@@ -285,7 +301,8 @@ def process_group(lines):
         alphaDist = getAlpha(x1,x2)
         r,theta,phi = spherical_q2(q1,q2,x2,L)
         ccDist = centerDist(x1,x2)
-        return sDist,ccDist,alphaDist,phi,theta
+        potVal = getPotential(x1,x2,q1.getAsVector(),q2.getAsVector())
+        return sDist,ccDist,alphaDist,phi,theta,potVal
     else:
         return sDist
 #place in main file
@@ -294,21 +311,46 @@ def process_group(lines):
 
 
 #filename = "../../../many_bodyMCMC/run.two.config"
-name = "MCMC_analytic_cut5L"
-name = "MCMC_analytic_cut2L"
-name2 = "MCMC_analytic_cut5L_bdiff"
+name = "Langevin_analytic_cut5L_test"
+name = "MALA_analytic_cut5L_1e-2"
+name2 = "MALA_analytic_cut5L_1e-1"
+
+name = "EM_analytic_cut5L_1e-2"
+name2 = "EM_analytic_cut5L_1e-1"
+#name = "EM_analytic_cut5L"
+#name2 = "LM_analytic_cut5L"
+#name = "MCMC_analytic_cut5L"
+#name = "LM_analytic_cut5L_1e-1"
+
+
+#name = "MCMC_analytic_cut1.5L"
+#name2 = "MCMC_analytic_cut5L_bdiff"
+#name2 = "MCMC_analytic_cut2L"
+
 filename = "../../../../%s.two.config" % name
 
 # for debugging the plotting routine
 # name = 'test'
 # filename = "../../../many_bodyMCMC/run.two.config"
-numSteps = 100000 # number of MCMC runs
+numSteps = 1000000 # number of MCMC runs
+numSteps = 1000000 # number of MCMC runs
 #was 10^6 here!
 L = 0.5 #particle lenght
 R = 0.025
 view_all = 1
-compare_data = 0
+compare_data = 1
 filename2 = "../../../../%s.two.config" % name2
+
+numbers1 = [0, 0, 0, 1, 0, 0, 0]
+numbers2 = [2, 0, 0, 1, 0, 0, 0]
+
+x1 = np.array(numbers1[0:3])
+x2 = np.array(numbers2[0:3])
+q1 = Quaternion(np.array(numbers1[3:]))
+q2 = Quaternion(np.array(numbers2[3:]))
+U = getPotential(x1,x2,q2.getAsVector(),q2.getAsVector())
+print(U)
+
 
 # ccDist = np.empty(numSteps)
 # sDist = np.empty(numSteps)
@@ -329,7 +371,8 @@ groups = [lines[i:i+3] for i in range(0, len(lines), 3)]
 if view_all:
     #sDist,ccDist,alphaDist,phiDist,thetaDist = pool.map(process_group, groups)
     result = pool.map(process_group, groups)
-    print(type(result)) #how many objects in this tuple? 
+
+    sDist,ccDist,alphaDist,phiDist,thetaDist,potDist = zip(*result)
 else:
     sDist = pool.map(process_group, groups)
 
@@ -344,7 +387,8 @@ if compare_data:
 
         # Apply the process_group function to each group of three lines using the Pool object
         if view_all:
-            sDist2,ccDist2,alphaDist2,phiDist2,thetaDist2 = pool.map(process_group, groups)
+            result = pool.map(process_group, groups)
+            sDist2,ccDist2,alphaDist2,phiDist2,thetaDist2,potDist2 = zip(*result)
         else:
             sDist2 = pool.map(process_group, groups)
 
@@ -354,6 +398,8 @@ if compare_data:
 
 
     fig,ax = plt.subplots()
+    print(np.shape(sDist))
+    print(np.shape(sDist2))
     plt.scatter(np.sort(sDist), np.sort(sDist2))
     # Add labels and legend
     plt.xlabel("Quantiles of Data 1")
@@ -413,35 +459,88 @@ if compare_data:
     #             phiDist[int(i/3-1)] = phi
     #             thetaDist[int(i/3-1)] = theta
 
+
+## VISUALISE VALUES OF THE POTENTIAL
+fig,ax = plt.subplots()
+bins = np.linspace(0, 10, num=31)
+ax.hist(potDist, bins=bins, density=True, edgecolor='black', color='#1f77b4')
+ax.set_ylabel('pdf')
+ax.set_xlabel('U')
+if compare_data:
+    # add a text box to the plot with multiple rows of data
+    textstr = "Max val 1 = %f\n Max val 2 = %f" % (np.max(potDist),np.max(potDist2))
+    ax.text(0.05, 0.95, textstr, transform=ax.transAxes,
+        fontsize=12, verticalalignment='top')
+    ax.hist(potDist2, bins=bins, density=True, edgecolor='black', alpha=0.5,color = 'red')
+    fig.savefig('Potential_hist_%s_%s.png' % (name,name2))
+else:
+    textstr = "Max val = %f" % (np.max(potDist))
+    ax.text(0.05, 0.95, textstr, transform=ax.transAxes,
+            fontsize=12, verticalalignment='top')
+    fig.savefig('Potential_hist_%s.png' % name)
+
+
 #cum_mean = np.empty(int(numSteps))
 #cum_var = np.empty(int(numSteps))
 # print("Total number of points: %u" % numSteps)
 # for i in range(numSteps):
 #     cum_mean[i] = np.mean(sDist[0:i+1])
 #     cum_var[i] = np.var(sDist[0:i+1])
-
-cum_mean = np.cumsum(sDist[:-1]) / np.arange(1, len(sDist))
+print(np.shape(sDist))
+cum_mean_dist = np.cumsum(sDist[:-1]) / np.arange(1, len(sDist))
 # Compute the cumulative variance using numpy.cumsum and numpy.cumsum of squares
-sDist = np.array(sDist)
 cumulative_sum = np.cumsum(sDist[:-1])
 cumulative_sum_sq = np.cumsum(sDist[:-1]**2)
 cum_var = (cumulative_sum_sq - cumulative_sum**2 / np.arange(1, numSteps+1)) / np.arange(1, numSteps+1)
 
+# Compute potential mean
+cum_mean_pot = np.cumsum(potDist[:-1]) / np.arange(1, len(potDist))
 
-# Visualise mean
+# Visualise mean in distance
 fig,ax = plt.subplots()
-ax.semilogx(range(numSteps),cum_mean)
-ax.set_ylabel('Mean shortest distance')
+ax.set_ylabel('Mean')
 ax.set_xlabel('Number of samples')
-fig.savefig('Mean_plot_%s.png' % name)
+if compare_data:
+    ax.semilogx(range(numSteps),cum_mean_dist,label='shortest dist %s' % (name))
+    cum_mean_dist2 = np.cumsum(sDist2[:-1]) / np.arange(1, len(sDist2))
+    ax.semilogx(range(numSteps),cum_mean_dist2,label='shortest dist %s' % (name2))
+    ax.semilogx(range(numSteps),cum_mean_pot,label='potential %s' % (name))
+    cum_mean_pot2 = np.cumsum(potDist2[:-1]) / np.arange(1, len(potDist2))
+    ax.semilogx(range(numSteps),cum_mean_pot2,label='potential %s' % (name2))
+    plt.legend()
+    fig.savefig('Mean_plot_%s_%s.png' % (name,name2))
+else:
+    ax.semilogx(range(numSteps),cum_mean_dist,label='shortest dist')
+    ax.semilogx(range(numSteps),cum_mean_pot,label='potential')
+    plt.legend()
+    fig.savefig('Mean_plot_%s.png' % name)
 
 # Plot also the difference of the mean
 fig,ax = plt.subplots()
-ax.loglog(range(int(numSteps/10)),np.abs(cum_mean[0:int(numSteps/10)]-cum_mean[-1]))
-ax.loglog(range(1,int(numSteps/10)),2/np.sqrt(range(1,int(numSteps/10))),'r.-')
-ax.set_ylabel('Error in mean of shortest distance')
+ax.set_ylabel('Error in mean')
 ax.set_xlabel('Number of samples')
-fig.savefig('Mean_error_plot_%s.png' % name)
+plt.grid(True)
+if compare_data:
+    ax.loglog(range(int(numSteps/10)),np.abs(cum_mean_dist[0:int(numSteps/10)]-cum_mean_dist[-1]),
+label='shortest dist %s' % (name))
+    ax.loglog(range(int(numSteps/10)),np.abs(cum_mean_dist2[0:int(numSteps/10)]-cum_mean_dist[-1]),
+label='shortest dist %s' % (name2))
+    ax.loglog(range(int(numSteps/10)),np.abs(cum_mean_pot[0:int(numSteps/10)]-cum_mean_pot[-1]),
+label='potential %s' % (name))
+    ax.loglog(range(int(numSteps/10)),np.abs(cum_mean_pot2[0:int(numSteps/10)]-cum_mean_pot[-1]),
+label='potential %s' % (name2))
+    plt.legend()
+    ax.loglog(range(1,int(numSteps/10)),2/np.sqrt(range(1,int(numSteps/10))),'k.-')
+    fig.savefig('Mean_error_plot_%s_%s.png' % (name,name2))
+
+else:
+    ax.loglog(range(int(numSteps/10)),np.abs(cum_mean_dist[0:int(numSteps/10)]-cum_mean_dist[-1]),
+label='shortest distance')
+    ax.loglog(range(int(numSteps/10)),np.abs(cum_mean_pot[0:int(numSteps/10)]-cum_mean_pot[-1]),
+label='potential')
+    ax.loglog(range(1,int(numSteps/10)),2/np.sqrt(range(1,int(numSteps/10))),'k.-')
+    plt.legend()
+    fig.savefig('Mean_error_plot_%s.png' % name)
 
 # Plot variance
 fig,ax = plt.subplots()
@@ -450,27 +549,37 @@ ax.set_ylabel('Variance shortest distance')
 ax.set_xlabel('Number of samples')
 fig.savefig('var_plot_%s.png' % name)
 
-
 ############################################################
 #histogram of shortest distances
 
 fig, ax1 = plt.subplots()
 print(max(sDist))
 print(min(sDist))
-ax1.hist(sDist, bins=30, edgecolor='black', color='#1f77b4')
+
+
+
+ax1.hist(sDist, bins=bins, density=True, edgecolor='black', color='#1f77b4')
 
 # Set axis labels and title
 ax1.set_xlabel('Shortest distance')
-ax1.set_ylabel('Frequency')
+ax.set_ylabel('pdf')
 #ax.set_title('Histogram of Random Data')
 
 # Add grid lines and set background color
 ax1.grid(True, axis='y', linestyle='--', alpha=0.5)
 ax1.set_axisbelow(True)
 ax1.set_facecolor('#e0e0e0')
-
-
-fig.savefig('Shortest_dist_%s.png' % name)
+if compare_data:
+    textstr = "Max val 1 = %f\n Max val 2 = %f" % (np.max(sDist),np.max(sDist2))
+    ax.text(0.05, 0.95, textstr, transform=ax.transAxes,
+            fontsize=12, verticalalignment='top')
+    ax1.hist(sDist2, bins=bins, density=True, edgecolor='black', alpha = 0.5,color = 'red')
+    fig.savefig('Shortest_dist_%s_%s.png' % (name,name2))
+else:
+    textstr = "Max val = %f" % (np.max(sDist))
+    ax.text(0.05, 0.95, textstr, transform=ax.transAxes,
+                fontsize=12, verticalalignment='top')
+    fig.savefig('Shortest_dist_%s.png' % name)
 
 #########################################################
 if view_all:
@@ -478,11 +587,11 @@ if view_all:
     fig, ax = plt.subplots()
     print(max(ccDist))
     print(min(ccDist))
-    ax.hist(ccDist, bins=30, edgecolor='black', color='#1f77b4')
+    ax.hist(ccDist, bins=bins, density=True, edgecolor='black', color='#1f77b4')
 
     # Set axis labels and title
     ax.set_xlabel('Center-center distance')
-    ax.set_ylabel('Frequency')
+    ax.set_ylabel('pdf')
     #ax.set_title('Histogram of Random Data')
 
     # Add grid lines and set background color
@@ -491,20 +600,27 @@ if view_all:
     ax.set_facecolor('#e0e0e0')
 
     # Show plot
-
-    fig.savefig('Center_dist.png')
+    if compare_data:
+        textstr = "Max val 1 = %f\n Max val 2 = %f" % (np.max(ccDist),np.max(ccDist2))
+        ax.text(0.05, 0.95, textstr, transform=ax.transAxes,
+                fontsize=12, verticalalignment='top')
+        ax1.hist(ccDist2, bins=bins, density=True, edgecolor='black', alpha = 0.5,color = 'red')
+        fig.savefig('Center_dist_%s_%s.png' % (name,name2))
+    else:
+        textstr = "Max val = %f" % (np.max(ccDist))
+        ax.text(0.05, 0.95, textstr, transform=ax.transAxes,
+                    fontsize=12, verticalalignment='top')
+        fig.savefig('Center_dist_%s.png' % name)
 
 
     ###########################################################
     ## VISUALISE DISTRIBUTION IN ALPHA
     fig, ax2 = plt.subplots()
-    print(max(alphaDist))
-    print(min(alphaDist))
-    ax2.hist(alphaDist, bins=30, edgecolor='black', color='#1f77b4')
+    ax2.hist(alphaDist, bins=30, density=True, edgecolor='black', color='#1f77b4')
 
     # Set axis labels and title
     ax2.set_xlabel('Alpha')
-    ax2.set_ylabel('Frequency')
+    ax.set_ylabel('pdf')
     #ax.set_title('Histogram of Random Data')
 
     # Add grid lines and set background color
@@ -512,7 +628,7 @@ if view_all:
     ax2.set_axisbelow(True)
     ax2.set_facecolor('#e0e0e0')
 
-    fig.savefig('Alpha_dist.png')
+    fig.savefig('Alpha_dist_%s.png' % name)
 
 
     ###########################################################
@@ -520,11 +636,11 @@ if view_all:
     fig, ax = plt.subplots()
     print(max(phiDist))
     print(min(phiDist))
-    ax.hist(phiDist, bins=30, edgecolor='black', color='#1f77b4')
+    ax.hist(phiDist, bins=30, density=True, edgecolor='black', color='#1f77b4')
 
     # Set axis labels and title
     ax.set_xlabel('Phi')
-    ax.set_ylabel('Frequency')
+    ax.set_ylabel('pdf')
     #ax.set_title('Histogram of Random Data')
 
     # Add grid lines and set background color
@@ -534,7 +650,7 @@ if view_all:
 
     # Show plot
 
-    fig.savefig('Phi_dist.png')
+    fig.savefig('Phi_dist_%s.png' % name)
     # Show plot
 
 
@@ -543,11 +659,11 @@ if view_all:
     fig, ax = plt.subplots()
     print(max(thetaDist))
     print(min(thetaDist))
-    ax.hist(thetaDist, bins=30, edgecolor='black', color='#1f77b4')
+    ax.hist(thetaDist, bins=30, density=True, edgecolor='black', color='#1f77b4')
 
     # Set axis labels and title
     ax.set_xlabel('Theta')
-    ax.set_ylabel('Frequency')
+    ax.set_ylabel('pdf')
     #ax.set_title('Histogram of Random Data')
 
     # Add grid lines and set background color
@@ -556,4 +672,4 @@ if view_all:
     ax.set_facecolor('#e0e0e0')
 
     # Show plot
-    fig.savefig('Theta_dist.png')
+    fig.savefig('Theta_dist_%s.png' % name)
