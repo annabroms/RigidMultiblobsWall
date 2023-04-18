@@ -8,8 +8,8 @@ import sys
 #sys.path.append('../quaternion_integrator')
 # print(os.getcwd())
 #
-sys.path.append('../../../quaternion_integrator')
-from quaternion import Quaternion
+sys.path.append('../..')
+from quaternion_integrator.quaternion import Quaternion
 
 #def HGO(r,quaternion_i,quaternion_j):
 def HGO(X):
@@ -30,11 +30,19 @@ def HGO(X):
 
 
         #a = 0.5 to start with
-        a = 0.5
-        #a = 0.2
+        a = 1
+        # decays more rapidly with a smaller a
+        #a = 1 #will determine the range for the potential. In initial investigations,
+        #a/2 sets the approximate range. a = 1 gives range approx 0.5
+
         b = a/10 #perpendicular coeff
         #b = b*1.1
-        p = 20  #strength of the potential
+        p = 0.05  #strength of the potential: will set a time-scale.
+        # More stiff if p is larger. NB: also need to guarantee no overlap
+        # If p is larger, dt has to be scaled accordingly
+
+        #What is now the probability of an overlap?
+        #p = 1
         chi = (a**2-b**2)/(a**2+b**2)
         s = np.sqrt(2)*b
 
