@@ -41,7 +41,7 @@ def calc_body_body_forces_torques_futhark_hgo(bodies, r_vectors, epsilon, sigma_
         locations[i] = bodies[i].location
         orientations[i] = bodies[i].orientation.getAsVector()
     force_torque_bodies = context.hgoInteraction(epsilon, sigma_par, sigma_ort, locations, orientations)
-    return context.fromFuthark(force_torque_bodies)
+    return context.from_futhark(force_torque_bodies)
 
 def calc_body_body_forces_torques_futhark_net(bodies, r_vectors, networkparameter, *args, **kwargs):
     Nbodies = len(bodies)
@@ -51,7 +51,7 @@ def calc_body_body_forces_torques_futhark_net(bodies, r_vectors, networkparamete
         locations[i] = bodies[i].location
         orientations[i] = bodies[i].orientation.getAsVector()
     force_torque_bodies = context.networkInteraction(networkparameter, locations, orientations)
-    return context.fromFuthark(force_torque_bodies)
+    return context.from_futhark(force_torque_bodies)
 
 #if __name__ == '__main__':
 
