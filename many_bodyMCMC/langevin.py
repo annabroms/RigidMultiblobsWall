@@ -94,7 +94,7 @@ if __name__ == '__main__':
     blob_radius = read.blob_radius
     periodic_length = read.periodic_length
     dt = 4e-2 #time-step: read from file instead
-    dt = 1e-3
+    dt = 1e-2
     weight = 1.0 * read.g
     kT = read.kT
     MCMC = 0
@@ -167,6 +167,8 @@ if __name__ == '__main__':
         #velocity_and_omega = grad + np.sqrt(2.0*kT/dt)*noise
         #print(np.max(grad*dt+np.sqrt(2.0*kT*dt)))
         #print(np.max(grad*dt))
+        gradT = grad[0:6]
+        gradA = grad[6:]
         print(np.max(np.abs(grad[6:])))
 
         #print(gradq)
@@ -184,11 +186,11 @@ if __name__ == '__main__':
             if body.prescribed_kinematics is False:
                 #Here we propose a new location and orientation, by doing langevin dynamics
 
-                trans_vel = -res_trans*grad[i*7:i*7+3]+np.sqrt(res_trans*2.0*kT/dt)*noise[i*6:i*6+3]
+                trans_vel = -res_trans*gradT[i*3:i*3+3]+np.sqrt(res_trans*2.0*kT/dt)*noise[i*6:i*6+3]
                 body.location_new = body.location + dt*trans_vel #the right indices?
                 Q = body.orientation.gradToTourqueMatrix() #is this step problematic?
 
-                rot_vel = - res_rot*Q @ grad[i*7+3:i*7+7]+np.sqrt(res_rot*2.0*kT/dt)*noise[i*6+3:i*6+6]
+                rot_vel = - res_rot*Q @ gradA[i*4:(i+1)*4]+np.sqrt(res_rot*2.0*kT/dt)*noise[i*6+3:i*6+6]
                 quaternion_dt = Quaternion.from_rotation(rot_vel*dt)
                 body.orientation_new = quaternion_dt*body.orientation
                 #print(body.location_new)

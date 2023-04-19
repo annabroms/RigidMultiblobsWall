@@ -18,6 +18,7 @@ def HGO(X):
     q_all = X[6:]
     # set parameters
     r = x[3:6]-x[0:3]
+
     L = 0.5 # particle length
     cut_off = 5*L
 
@@ -38,6 +39,7 @@ def HGO(X):
         b = a/10 #perpendicular coeff
         #b = b*1.1
         p = 0.05  #strength of the potential: will set a time-scale.
+        p = 10
         # More stiff if p is larger. NB: also need to guarantee no overlap
         # If p is larger, dt has to be scaled accordingly
 
@@ -88,6 +90,7 @@ def HGO(X):
         #return float('inf')
         #return 0.1*(np.linalg.norm(r)**2 - cut_off**2)
         return 0.2*(np.linalg.norm(r)**2 - cut_off**2)
+
 def getGradient(x,q):
     my_grad = grad(HGO)
     X = np.concatenate((x,q))

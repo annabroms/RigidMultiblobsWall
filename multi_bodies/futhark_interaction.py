@@ -1,21 +1,22 @@
 import numpy as np
 import sys
-import importlib
+
 import os.path
 from functools import partial
 
 #sys.path.append('../../..')
 sys.path.append('..')
-#from quaternion_integrator.quaternion import Quaternion
-
+from quaternion_integrator.quaternion import Quaternion
+from rods.tools import pair_histograms as ph
 #import multi_bodies
-import multi_bodies._futhark_interaction as _futhark_interaction
+#import multi_bodies._futhark_interaction as _futhark_interaction
 #from multi_bodies import *
 #import _futhark_interaction as _futhark_interaction
-#import _futhark_interaction as _futhark_interaction
+import _futhark_interaction as _futhark_interaction
 #import futhark_tools._futhark_interaction
 #import futhark_tools as _futhark_interaction
 from futhark_ffi import Futhark
+
 
 context = Futhark(_futhark_interaction)
 
@@ -52,39 +53,41 @@ def calc_body_body_forces_torques_futhark_net(bodies, r_vectors, networkparamete
     force_torque_bodies = context.networkInteraction(networkparameter, locations, orientations)
     return context.fromFuthark(force_torque_bodies)
 
-if __name__ == '__main__':
+#if __name__ == '__main__':
 
     #generate new valid random configuration by checking shortest distance
-    d = 0
-    R = 0.025
-    L = 0.5
+d = 0
+R = 0.025
+L = 0.5
 
-    q1 = Quaternion([1,0,0,0])
-    q2 = Quaternion([1,0,0,0])
+q1 = Quaternion([1,0,0,0])
+q2 = Quaternion([1,0,0,0])
 
-    while d < 2*R:
-        #generate new random configuration
-        x1 = np.random.uniform(-5, 5, 3)
-        x2 = np.random.uniform(-5, 5, 3)
-        q1.random_orientation()
-        q2.random_orientation()
-
-
-        p1,r1 = pair_histograms.endpoints(q1, L, x1)
-        p2,r2 = pair_histograms.endpoints(q2, L, x2)
-
-        d = pair_histograms.distance(p1, r1, p2, r2)
+while d < 2*R:
+    #generate new random configuration
+    x1 = np.random.uniform(-5, 5, 3)
+    x2 = np.random.uniform(-5, 5, 3)
+    q1.random_orientation()
+    q2.random_orientation()
 
 
-    #FT = calc_body_body_force_torque_new(x1,x2,q1,q2)
-    locations = np.zeros(Nbodies, 3)
-    orientations = np.zeros(Nbodies, 4)
-    locations[0] = x1
-    locations[1] = x2
-    orientations[0] = q1
-    orientations[1] = q2
-    epsilon = 20
-    sigma_par = 0.5
-    sigma_ort = 0.5/10
-    FT = context.hgoInteraction(epsilon, sigma_par, sigma_ort, locations, orientations)
-    print(FT[0,:])
+    d = ph.shortestDist(x1,x2,q1,q2,L,R)
+
+
+
+
+#FT = calc_body_body_force_torque_new(x1,x2,q1,q2)
+Nbodies = 2
+locations = np.zeros((Nbodies, 3))
+orientations = np.zeros((Nbodies, 4))
+locations[0] = x1
+locations[1] = x2
+orientations[0] = q1.getAsVector()
+orientations[1] = q2.getAsVector()
+epsilon = 20
+sigma_par = 0.5
+sigma_ort = 0.5/10
+force_torque_bodies = context.hgoInteraction(epsilon, sigma_par, sigma_ort, locations, orientations)
+FT = context.from_futhark(force_torque_bodies)
+print(FT[0])
+    #print(FT[0])
