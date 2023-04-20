@@ -11,7 +11,11 @@ from futhark_ffi import Futhark
 
 context = Futhark(_futhark_interaction)
 
-#def read_network_parameter(filename):
+def read_network_parameter(filename):
+    with open(filename, 'rb') as file:
+        parameter = context.restore_networkParameter(file.read())
+    return parameter
+        
 
 #quaternions are taken as arrays, this can be changed
 def futhark_hgo(location, orientation, epsilon, sigma_par, sigma_ort):
