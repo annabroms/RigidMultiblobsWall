@@ -21,6 +21,10 @@ from futhark_ffi import Futhark
 context = Futhark(_futhark_interaction)
 
 #def read_network_parameter(filename):
+def read_network_parameter(filename):
+    with open(filename, 'rb') as file:
+        parameter = context.restore_networkParameter(file.read())
+    return parameter
 
 #quaternions are taken as arrays, this can be changed
 def futhark_hgo(location, orientation, epsilon, sigma_par, sigma_ort):
@@ -56,14 +60,17 @@ def calc_body_body_forces_torques_futhark_net(bodies, r_vectors, networkparamete
 #if __name__ == '__main__':
 
     #generate new valid random configuration by checking shortest distance
-d = 0
+d = -1
 R = 0.025
 L = 0.5
+
+L = 6
+R = 0.5
 
 q1 = Quaternion([1,0,0,0])
 q2 = Quaternion([1,0,0,0])
 
-while d < 2*R:
+while d < 0 or (d > 0.5*R):
     #generate new random configuration
     x1 = np.random.uniform(-5, 5, 3)
     x2 = np.random.uniform(-5, 5, 3)
@@ -74,7 +81,7 @@ while d < 2*R:
     d = ph.shortestDist(x1,x2,q1,q2,L,R)
 
 
-
+print("Distance is %d " % d)
 
 #FT = calc_body_body_force_torque_new(x1,x2,q1,q2)
 Nbodies = 2
@@ -84,10 +91,17 @@ locations[0] = x1
 locations[1] = x2
 orientations[0] = q1.getAsVector()
 orientations[1] = q2.getAsVector()
-epsilon = 20
-sigma_par = 0.5
-sigma_ort = 0.5/10
+epsilon = 1
+sigma_par = 2
+sigma_ort = 3
+force_torque_bodies = context.hgoInteraction(epsilon, sigma_par, sigma_ort, locations, orientations)
+filename = 'p1_a2_b3.net'
 force_torque_bodies = context.hgoInteraction(epsilon, sigma_par, sigma_ort, locations, orientations)
 FT = context.from_futhark(force_torque_bodies)
+parameter = read_network_parameter(filename)
+force_torque_bodies = context.networkInteraction(parameter, locations, orientations)
+FT_net = context.from_futhark(force_torque_bodies)
 print(FT[0])
+print(FT_net[0])
+
     #print(FT[0])

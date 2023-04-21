@@ -19,7 +19,7 @@ while found_functions is False:
   try:
     #import many_body_potential_pycuda
     #from many_bodyMCMC import many_body_potential_pycuda
-    
+
     import potential_pycuda_user_defined
 
     from body import body
@@ -110,9 +110,10 @@ if __name__ == '__main__':
   blob_radius = read.blob_radius
   periodic_length = read.periodic_length
   max_translation = blob_radius * 0.1
-  max_translation = 0.05 #just to try
+  max_translation = 0.4 #just to try
   weight = 1.0 * read.g
   kT = read.kT
+  
 
   # Create rigid bodies
   bodies = []

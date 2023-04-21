@@ -14,6 +14,7 @@ import os
 #
 # sys.path.append('../../../quaternion_integrator')
 
+sys.path.append('../../..')
 sys.path.append('../..')
 from quaternion_integrator.quaternion import Quaternion
 
@@ -212,14 +213,31 @@ def endpoints(q, L, c):
 
 def shortestDist(x1,x2,q1,q2,L,R):
     #returns shortest distance between the rods
+    L = L-2*R #correct for the semi-spherical caps
     p1,r1 = endpoints(q1, L, x1)
     p2,r2 = endpoints(q2, L, x2)
+
+#    print(np.linalg.norm(p1-r1)-L) #this is zero
     # print("End coord")
     # print(p1)
     # print(r1)
     # print(p2)
     # print(r2)
-    return distance(p1, r1, p2, r2)-2*R
+    d = distance(p1, r1, p2, r2)-2*R
+
+    # if d < 0:
+    #     print(d)
+    #
+    #     fig, ax = plt.subplots()
+    #
+    #     ax = fig.add_subplot(111, projection='3d')
+    #     plt.plot([p1[0],r1[0]],[p1[1],r1[1]],[p1[2],r1[2]])
+    #     plt.plot([p2[0],r2[0]],[p2[1],r2[1]],[p1[2],r1[2]])
+    #     #ax.axis('equal')
+    #     plt.show()
+
+
+    return d
 
 
 def spherical_coordinates(q, L):
@@ -304,8 +322,11 @@ def process_group(lines):
 
     x1 = np.array(numbers1[0:3])
     x2 = np.array(numbers2[0:3])
+
     q1 = Quaternion(np.array(numbers1[3:]))
     q2 = Quaternion(np.array(numbers2[3:]))
+
+
 
     sDist = shortestDist(x1,x2,q1,q2,L,R)
 
@@ -323,12 +344,16 @@ def process_group(lines):
 
 if __name__ == '__main__':
     #filename = "../../../many_bodyMCMC/run.two.config"
-    name = "Langevin_analytic_cut5L_test"
-    name = "MALA_analytic_cut5L_1e-2"
-    name2 = "MALA_analytic_cut5L_1e-1"
 
-    name = "EM_analytic_cut5L_1e-2"
-    name2 = "EM_analytic_cut5L_1e-1"
+    name = "MCMC_analytic_cut2L"
+    name = "MALA_analytic_cut2L"
+    name2 = "MALA_analytic_cut2L"
+    # name = "Langevin_analytic_cut5L_test"
+    # name = "MALA_analytic_cut5L_1e-2"
+    # name2 = "MALA_analytic_cut5L_1e-1"
+    #
+    # name = "EM_analytic_cut5L_1e-2"
+    # name2 = "EM_analytic_cut5L_1e-1"
     #name = "EM_analytic_cut5L"
     #name2 = "LM_analytic_cut5L"
     #name = "MCMC_analytic_cut5L"
@@ -345,12 +370,12 @@ if __name__ == '__main__':
     # name = 'test'
     # filename = "../../../many_bodyMCMC/run.two.config"
     numSteps = 1000000 # number of MCMC runs
-    numSteps = 1000000 # number of MCMC runs
+    numSteps = 100000 # number of MCMC runs
     #was 10^6 here!
-    L = 0.5 #particle lenght
+    L = 0.5 #particle length
     R = 0.025
     view_all = 1
-    compare_data = 1
+    compare_data = 0
     filename2 = "../../../../%s.two.config" % name2
 
     numbers1 = [0, 0, 0, 1, 0, 0, 0]
@@ -388,6 +413,7 @@ if __name__ == '__main__':
     else:
         sDist = pool.map(process_group, groups)
 
+    sDist = np.array(sDist)
     if compare_data:
         # Now, do the same for another data set
         with open(filename2) as f:
@@ -474,7 +500,7 @@ if __name__ == '__main__':
 
     ## VISUALISE VALUES OF THE POTENTIAL
     fig,ax = plt.subplots()
-    bins = np.linspace(0, 10, num=31)
+    bins = np.linspace(0, 0.3, num=31)
     ax.hist(potDist, bins=bins, density=True, edgecolor='black', color='#1f77b4')
     ax.set_ylabel('pdf')
     ax.set_xlabel('U')
@@ -498,7 +524,7 @@ if __name__ == '__main__':
     # for i in range(numSteps):
     #     cum_mean[i] = np.mean(sDist[0:i+1])
     #     cum_var[i] = np.var(sDist[0:i+1])
-    print(np.shape(sDist))
+
     cum_mean_dist = np.cumsum(sDist[:-1]) / np.arange(1, len(sDist))
     # Compute the cumulative variance using numpy.cumsum and numpy.cumsum of squares
     cumulative_sum = np.cumsum(sDist[:-1])
@@ -565,11 +591,12 @@ if __name__ == '__main__':
     #histogram of shortest distances
 
     fig, ax1 = plt.subplots()
+    print("shortest distance max and min")
     print(max(sDist))
     print(min(sDist))
 
 
-
+    bins = np.linspace(-L, 2*L, num=31)
     ax1.hist(sDist, bins=bins, density=True, edgecolor='black', color='#1f77b4')
 
     # Set axis labels and title
@@ -599,6 +626,7 @@ if __name__ == '__main__':
         fig, ax = plt.subplots()
         print(max(ccDist))
         print(min(ccDist))
+        bins = np.linspace(0, 3*L, num=31)
         ax.hist(ccDist, bins=bins, density=True, edgecolor='black', color='#1f77b4')
 
         # Set axis labels and title

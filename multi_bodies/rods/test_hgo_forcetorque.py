@@ -78,12 +78,12 @@ if __name__ == '__main__':
     q2 = Quaternion([1,0,0,0])
     x1 = np.array([0,0,0])
 
-    while (d < 0) or (d > 2*L):
+    while (d < 0) or (d > L):
         #generate new random configuration
         x1 = np.random.uniform(-5, 5, 3)
         x2 = np.random.uniform(-5, 5, 3)
-        #q1.random_orientation()
-        #q2.random_orientation()
+        q1.random_orientation()
+        q2.random_orientation()
 
         d = ph.shortestDist(x1,x2,q1,q2,L,R)
 
@@ -111,9 +111,12 @@ if __name__ == '__main__':
     print(FT)
     print("Difference in each component")
     print(FT_python-FT)
+    print("Relative error")
+    #Should normalise with the force for the force and the torque for the torque!
+    print((FT_python-FT)/np.linalg.norm(FT))
 
-    print("Difference in torque on second particle, but for sign")
-    print(FT[3]+FT_python[3])
+    print("Difference in torque on second particle")
+    print(FT[3]-FT_python[3])
 
 
     ode = 0
@@ -158,7 +161,7 @@ if __name__ == '__main__':
 
         #time step the dynamics
         dt = 1e-2 #time step size #Was 1e-3 here before
-        N = 100 # number of time steps
+        N = 1000 # number of time steps
         alphaVec = np.zeros(N)
         thetaVec = np.zeros(N)
         phiVec = np.zeros(N)
@@ -193,7 +196,7 @@ if __name__ == '__main__':
             potVec[i] = potVal
             tVec[i] = i*dt
 
-
+        print(ccVec[-1])
         fig,ax = plt.subplots()
         plt.plot(tVec,alphaVec)
         ax.set_ylabel('alpha')

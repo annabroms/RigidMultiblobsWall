@@ -2,7 +2,7 @@ n_steps                     100000
 n_save                      1
 
 
-#kT                          1.0
+kT                          1.0
 #g					                  1.0
 
 #debye_length				        1.0
@@ -16,7 +16,8 @@ domain				 no_wall
 
 
 save_clones                 one_file
-output_name                 ../../MCMC_analytic_cut5L_a
+output_name                 ../../MCMC_analytic_cut2L
+output_name                 ../../MALA_analytic_cut2L
 
 
 structure ../multi_bodies/rods/Structures/rt_optrod_aspect20_res1.vertex ../multi_bodies/rods/Structures/two.clones

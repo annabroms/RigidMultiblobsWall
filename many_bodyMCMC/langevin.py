@@ -4,6 +4,11 @@ import time
 import sys
 import subprocess
 import os.path
+
+sys.path.append('..')
+
+from multi_bodies.rods.tools import pair_histograms as ph
+
 try:
       import pickle as cpickle
 except:
@@ -97,8 +102,10 @@ if __name__ == '__main__':
     dt = 1e-2
     weight = 1.0 * read.g
     kT = read.kT
-    MCMC = 0
+    MCMC = 1
     LM = 0
+    L = 0.5
+    R = 0.025
     sample_r_vectors = []
 
     # Create rigid bodies
@@ -122,10 +129,10 @@ if __name__ == '__main__':
         bodies = np.array(bodies)
 
     #For debugging of rotations
-    q = Quaternion([1, 0, 0, 0])
-    q.random_orientation()
-    print(q.getAsVector())
-    print(2*q.gradToTourqueMatrix())
+    # q = Quaternion([1, 0, 0, 0])
+    # q.random_orientation()
+    # print(q.getAsVector())
+    # print(2*q.gradToTourqueMatrix())
 
 
 
@@ -213,12 +220,31 @@ if __name__ == '__main__':
 
             #print(np.exp(-(sample_state_energy - current_state_energy)))
             # accept or reject the sample state and collect data accordingly
-            print(acceptance_ratio)
-            print("energies")
-            print(sample_state_energy)
-            print(current_state_energy)
+            #print(acceptance_ratio)
 
-            print(np.exp(-(sample_state_energy - current_state_energy)))
+
+            #print(np.exp(-(sample_state_energy - current_state_energy)))
+            #Check here for overlaps in both new and old state
+            dold = ph.shortestDist(x1,x2,q1,q2,L,R)
+
+            x1 = bodies[0].location_new
+            x2 = bodies[1].location_new
+            q1 = bodies[0].orientation_new
+            q2 = bodies[1].orientation_new
+            dnew = ph.shortestDist(x1,x2,q1,q2,L,R)
+
+            if (dold < 0) or (dnew < 0):
+                print("Overlap occurs")
+                print(dnew)
+                print(dold)
+                print("energies")
+                print(sample_state_energy)
+                print(current_state_energy)
+                print(np.exp(-(sample_state_energy - current_state_energy)))
+                raise Exception("Overlap occuring")
+
+
+
             if np.random.uniform(0.0, 1.0) < np.exp(-(sample_state_energy - current_state_energy) / kT):
                 current_state_energy = sample_state_energy
                 accepted_moves += 1

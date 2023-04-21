@@ -20,7 +20,8 @@ def HGO(X):
     r = x[3:6]-x[0:3]
 
     L = 0.5 # particle length
-    cut_off = 5*L
+    cut_off = 1.5*L
+    p = 1
 
     if np.linalg.norm(r) < cut_off:
         #print("distance")
@@ -31,15 +32,22 @@ def HGO(X):
 
 
         #a = 0.5 to start with
-        a = 1
+        a = 0.3 # larger range?
+        #a = 1
+
         # decays more rapidly with a smaller a
         #a = 1 #will determine the range for the potential. In initial investigations,
         #a/2 sets the approximate range. a = 1 gives range approx 0.5
 
-        b = a/10 #perpendicular coeff
+        # b = a/8 #perpendicular coeff
+        #
+        #a = 0.3;
+        b = a/5;
+        #b = a/6
         #b = b*1.1
-        p = 0.05  #strength of the potential: will set a time-scale.
-        p = 10
+        #p = 0.1  #strength of the potential: will set a time-scale.
+        #p = 1
+
         # More stiff if p is larger. NB: also need to guarantee no overlap
         # If p is larger, dt has to be scaled accordingly
 
@@ -87,9 +95,9 @@ def HGO(X):
         #print(epsilon*np.exp((-np.linalg.norm(r)**2)/(sigma**2)))
         return epsilon*np.exp((-np.linalg.norm(r)**2)/(sigma**2))
     else:
-        #return float('inf')
-        #return 0.1*(np.linalg.norm(r)**2 - cut_off**2)
-        return 0.2*(np.linalg.norm(r)**2 - cut_off**2)
+        #return 100 #1e4
+        return p*(np.linalg.norm(r)**2 - cut_off**2)
+        #return *(np.linalg.norm(r) - cut_off)**2 #note that this function will not be continuous...
 
 def getGradient(x,q):
     my_grad = grad(HGO)
