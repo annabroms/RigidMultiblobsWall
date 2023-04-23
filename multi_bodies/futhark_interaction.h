@@ -115,8 +115,10 @@ struct futhark_opaque_particleType *futhark_restore_opaque_particleType(struct f
 // Entry points
 int futhark_entry_hgoInteraction(struct futhark_context *ctx, struct futhark_f32_2d **out0, const float in0, const float in1, const float in2, const struct futhark_f32_2d *in3, const struct futhark_f32_2d *in4);
 int futhark_entry_hgoPotential(struct futhark_context *ctx, float *out0, const float in0, const float in1, const float in2, const struct futhark_f32_1d *in3, const struct futhark_f32_1d *in4);
+int futhark_entry_hgoPotentialAbs(struct futhark_context *ctx, float *out0, const float in0, const float in1, const float in2, const struct futhark_f32_1d *in3, const struct futhark_f32_1d *in4, const struct futhark_f32_1d *in5, const struct futhark_f32_1d *in6);
 int futhark_entry_networkInteraction(struct futhark_context *ctx, struct futhark_f32_2d **out0, const struct futhark_opaque_networkParameter *in0, const struct futhark_f32_2d *in1, const struct futhark_f32_2d *in2);
 int futhark_entry_networkPotential(struct futhark_context *ctx, float *out0, const struct futhark_opaque_networkParameter *in0, const struct futhark_f32_1d *in1, const struct futhark_f32_1d *in2);
+int futhark_entry_networkPotentialAbs(struct futhark_context *ctx, float *out0, const struct futhark_opaque_networkParameter *in0, const struct futhark_f32_1d *in1, const struct futhark_f32_1d *in2, const struct futhark_f32_1d *in3, const struct futhark_f32_1d *in4);
 
 // Miscellaneous
 int futhark_context_sync(struct futhark_context *ctx);

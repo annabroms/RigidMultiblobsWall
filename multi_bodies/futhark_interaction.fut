@@ -29,6 +29,22 @@ entry networkPotential (parameter: networkParameter [][]) location orientation =
 entry hgoPotential epsilon sigma_par sigma_ort location orientation = 
     hgo epsilon sigma_par sigma_ort (fromLO location orientation)
 
+entry networkPotentialAbs (parameter: networkParameter [][])
+    location0 orientation0 
+    location1 orientation1
+    = 
+    let net = fromParameter parameter 
+    in (forceTorquePot net 
+        (toRelative (fromLO location0 orientation0) (fromLO location1 orientation1))
+       ).1
+
+entry hgoPotentialAbs epsilon sigma_par sigma_ort
+    location0 orientation0 
+    location1 orientation1 
+    = 
+    hgo epsilon sigma_par sigma_ort 
+        (toRelative (fromLO location0 orientation0) (fromLO location1 orientation1))
+
 entry networkInteraction (parameter: networkParameter [][]) locations orientations =
     let coords = fromLOs locations orientations
     let net = fromParameter parameter 

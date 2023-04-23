@@ -37,10 +37,18 @@ def futhark_net(location, orientation, networkparameter):
     print(location)
     print(orientation)
     potential = context.networkPotential(networkparameter, location, orientation)
-    #potential = context.networkPotential(networkparameter, orientation, location)
     return potential
     #return context.from_futhark(potential)
 
+#accepts two absolute coordinates instead of on relative
+def futhark_hgo_abs(location0, orientation0, location1, orientation1, epsilon, sigma_par, sigma_ort):
+    potential = context.hgoPotentialAbs(epsilon, sigma_par, sigma_ort, location0, orientation0, location1, orientation1)
+    return potential
+
+def futhark_net_abs(location0, orientation0, location1, orientation1, networkparameter):
+    potential = context.networkPotentialAbs(networkparameter, location0, orientation0, location1, orientation1)
+    return potential
+    #return context.from_futhark(potential)
 
 #r_vectors not used in calculation
 def calc_body_body_forces_torques_futhark_hgo(bodies, r_vectors, epsilon, sigma_par, sigma_ort, *args, **kwargs):
