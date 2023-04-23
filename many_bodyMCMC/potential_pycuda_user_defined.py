@@ -11,6 +11,10 @@ import sys
 sys.path.append('../..')
 from quaternion_integrator.quaternion import Quaternion
 
+from multi_bodies.rods.tools import pair_histograms as ph
+# needed to compute shortest distances
+
+
 #def HGO(r,quaternion_i,quaternion_j):
 def HGO(X):
     # X = x,q
@@ -19,20 +23,31 @@ def HGO(X):
     # set parameters
     r = x[3:6]-x[0:3]
 
-    L = 0.5 # particle length
-    cut_off = 1.5*L
-    p = 1
+    #L = 0.5 # particle length
+    #cut_off = 1.5*L
+    a = 0.3 # larger range?
+    b = a/5;
+    L = 2*a
+    p = 5
+    R = 0 # want to compute shortest distance between line segments
 
-    if np.linalg.norm(r) < cut_off:
+    quat1 = Quaternion(q_all[0:4]) #How to create a quaternion?
+    quat2 = Quaternion(q_all[4:])
+    d = ph.shortestDist(x[0:3],x[3:6],quat1,quat2,L,R)
+
+    cut_off = 1.5*(a+b)
+    #cut_off = 0.5*cut_off
+    #print(cut_off)
+    #if np.linalg.norm(r) < cut_off:
+    if d < cut_off:
         #print("distance")
         #print(np.linalg.norm(r))
-        quaternion_j = Quaternion(q_all[0:4]) #How to create a quaternion?
-        quaternion_i = Quaternion(q_all[4:])
+
 
 
 
         #a = 0.5 to start with
-        a = 0.3 # larger range?
+
         #a = 1
 
         # decays more rapidly with a smaller a
@@ -42,7 +57,7 @@ def HGO(X):
         # b = a/8 #perpendicular coeff
         #
         #a = 0.3;
-        b = a/5;
+
         #b = a/6
         #b = b*1.1
         #p = 0.1  #strength of the potential: will set a time-scale.
@@ -95,8 +110,8 @@ def HGO(X):
         #print(epsilon*np.exp((-np.linalg.norm(r)**2)/(sigma**2)))
         return epsilon*np.exp((-np.linalg.norm(r)**2)/(sigma**2))
     else:
-        #return 100 #1e4
-        return p*(np.linalg.norm(r)**2 - cut_off**2)
+        return 1e4 #100 #1e4
+        #return p*(np.linalg.norm(r)**2 - cut_off**2)
         #return *(np.linalg.norm(r) - cut_off)**2 #note that this function will not be continuous...
 
 def getGradient(x,q):

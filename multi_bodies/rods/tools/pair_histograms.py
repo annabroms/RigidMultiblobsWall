@@ -345,8 +345,8 @@ def process_group(lines):
 if __name__ == '__main__':
     #filename = "../../../many_bodyMCMC/run.two.config"
 
-    name = "MCMC_analytic_cut2L"
-    name = "MALA_analytic_cut2L"
+    name = "MCMC_analytic_cut1.5"
+    #name = "MALA_analytic_cut2"
     name2 = "MALA_analytic_cut2L"
     # name = "Langevin_analytic_cut5L_test"
     # name = "MALA_analytic_cut5L_1e-2"
@@ -373,7 +373,9 @@ if __name__ == '__main__':
     numSteps = 100000 # number of MCMC runs
     #was 10^6 here!
     L = 0.5 #particle length
+    L = 0.3*2
     R = 0.025
+    R = 0
     view_all = 1
     compare_data = 0
     filename2 = "../../../../%s.two.config" % name2
@@ -517,6 +519,19 @@ if __name__ == '__main__':
                 fontsize=12, verticalalignment='top')
         fig.savefig('Potential_hist_%s.png' % name)
 
+    fig,ax = plt.subplots()
+    plt.scatter(sDist,potDist)
+    ax.set_yscale('log')
+    ax.set_ylabel('U')
+    ax.set_xlabel('shortest distance')
+    fig.savefig('Potential_distance_log_%s.png' % name)
+
+    fig,ax = plt.subplots()
+    plt.scatter(sDist,potDist)
+    ax.set_ylabel('U')
+    ax.set_xlabel('shortest distance')
+    fig.savefig('Potential_distance_%s.png' % name)
+
 
     #cum_mean = np.empty(int(numSteps))
     #cum_var = np.empty(int(numSteps))
@@ -596,7 +611,8 @@ if __name__ == '__main__':
     print(min(sDist))
 
 
-    bins = np.linspace(-L, 2*L, num=31)
+    # bins = np.linspace(0, 2*L, num=61)
+    bins = np.linspace(0, 0.5*L, num=61)
     ax1.hist(sDist, bins=bins, density=True, edgecolor='black', color='#1f77b4')
 
     # Set axis labels and title
@@ -626,7 +642,7 @@ if __name__ == '__main__':
         fig, ax = plt.subplots()
         print(max(ccDist))
         print(min(ccDist))
-        bins = np.linspace(0, 3*L, num=31)
+        bins = np.linspace(0, 2*L, num=31)
         ax.hist(ccDist, bins=bins, density=True, edgecolor='black', color='#1f77b4')
 
         # Set axis labels and title

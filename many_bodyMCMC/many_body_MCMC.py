@@ -4,6 +4,19 @@ import time
 import sys
 import subprocess
 import os.path
+
+sys.path.append('..')
+sys.path.append('../..')
+
+import multi_bodies._futhark_interaction as _futhark_interaction
+import multi_bodies.futhark_interaction as fi
+#import futhark_tools._futhark_interaction
+#import futhark_tools as _futhark_interaction
+from futhark_ffi import Futhark
+
+#context = Futhark(_futhark_interaction)
+
+
 try:
   import pickle as cpickle
 except:
@@ -110,10 +123,17 @@ if __name__ == '__main__':
   blob_radius = read.blob_radius
   periodic_length = read.periodic_length
   max_translation = blob_radius * 0.1
-  max_translation = 0.4 #just to try
+  max_translation = 0.2 #just to try
   weight = 1.0 * read.g
   kT = read.kT
-  
+  network = 1
+
+
+  if network:
+      #Load network parameters
+      filename = '../multi_bodies/p1_a2_b3.net'
+      netparams = fi.read_network_parameter(filename)
+
 
   # Create rigid bodies
   bodies = []
@@ -148,16 +168,11 @@ if __name__ == '__main__':
   # begin MCMC
   # get energy of the current state before jumping into the loop
   start_time = time.time()
-  # current_state_energy = many_body_potential_pycuda.compute_total_energy(bodies,
-  #                                                                        sample_r_vectors,
-  #                                                                        periodic_length = periodic_length,
-  #                                                                        debye_length_wall = read.debye_length_wall,
-  #                                                                        repulsion_strength_wall = read.repulsion_strength_wall,
-  #                                                                        debye_length = read.debye_length,
-  #                                                                        repulsion_strength = read.repulsion_strength,
-  #                                                                        weight = weight,
-  #                                                                        blob_radius = blob_radius)
-  current_state_energy = potential_pycuda_user_defined.compute_total_energy(bodies,
+
+  if network:
+      current_state_energy = fi.compute_total_energy(bodies, netparams)
+  else:
+      current_state_energy = potential_pycuda_user_defined.compute_total_energy(bodies,
                                                                            sample_r_vectors,
                                                                            periodic_length = periodic_length,
                                                                            debye_length_wall = read.debye_length_wall,
@@ -191,16 +206,12 @@ if __name__ == '__main__':
       blob_index += body.Nblobs
 
     # calculate potential of proposed new state
-    # sample_state_energy = many_body_potential_pycuda.compute_total_energy(bodies,
-    #                                                                       sample_r_vectors,
-    #                                                                       periodic_length = periodic_length,
-    #                                                                       debye_length_wall = read.debye_length_wall,
-    #                                                                       repulsion_strength_wall = read.repulsion_strength_wall,
-    #                                                                       debye_length = read.debye_length,
-    #                                                                       repulsion_strength = read.repulsion_strength,
-    #                                                                       weight = weight,
-    #                                                                       blob_radius = blob_radius)
-    sample_state_energy = potential_pycuda_user_defined.compute_total_energy(bodies,
+    if network:
+        sample_state_energy = fi.compute_total_energy(bodies, netparams)
+        print(sample_state_energy)
+
+    else:
+        sample_state_energy = potential_pycuda_user_defined.compute_total_energy(bodies,
                                                                           sample_r_vectors,
                                                                           periodic_length = periodic_length,
                                                                           debye_length_wall = read.debye_length_wall,

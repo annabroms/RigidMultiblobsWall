@@ -16,8 +16,9 @@ domain				 no_wall
 
 
 save_clones                 one_file
-output_name                 ../../MCMC_analytic_cut2L
-output_name                 ../../MALA_analytic_cut2L
+output_name                 ../../MCMC_analytic_cut1.5
+output_name                 ../../MCMC_cut1.5
+#output_name                 ../../MALA_analytic_cut1.5
 
 
 structure ../multi_bodies/rods/Structures/rt_optrod_aspect20_res1.vertex ../multi_bodies/rods/Structures/two.clones
