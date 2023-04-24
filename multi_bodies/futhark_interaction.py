@@ -4,9 +4,12 @@ import sys
 import os.path
 from functools import partial
 
+
+
 sys.path.append('../../..')
 sys.path.append('..')
 sys.path.append('../..')
+import many_bodyMCMC.potential_pycuda_user_defined as hgo
 from quaternion_integrator.quaternion import Quaternion
 from multi_bodies.rods.tools import pair_histograms as ph
 #import multi_bodies
@@ -34,8 +37,7 @@ def futhark_hgo(location, orientation, epsilon, sigma_par, sigma_ort):
 
 #networkparamter needs to be read from a file
 def futhark_net(location, orientation, networkparameter):
-    print(location)
-    print(orientation)
+
     potential = context.networkPotential(networkparameter, location, orientation)
     return potential
     #return context.from_futhark(potential)
@@ -87,18 +89,34 @@ def compute_total_energy(bodies, networkparameter):
   #   q[k] = b.orientation_new.getAsVector()
 
   for i in range(Nbodies):
-      x[i] = bodies[i].location
-      q[i] = bodies[i].orientation.getAsVector()
+      x[i] = bodies[i].location_new
+      q[i] = bodies[i].orientation_new.getAsVector()
     #q[k*4 + 1 : k*4 + 4] = b.orientation_new.p
-  print(np.shape(x))
+  #print(np.shape(x))
   #NB: So far we consider only two particles!
-  energy = futhark_net(x,q,networkparameter)
-  # epsilon = 1
+  #energy = futhark_net(x,q,networkparameter)
+
+  # Needed to determine cut_off
+  a = 0.3
+  b = a/5
+  L = 2*a
+  R = 0
+  quat1 = Quaternion(q[0]) #How to create a quaternion?
+  quat2 = Quaternion(q[1])
+
+  d = ph.shortestDist(x[0], x[1], quat1, quat2,L,R)
+  cut_off = 1.5*(a+b)
+  #cut_off = 0.5*cut_off
+  #print(cut_off)
+  #if np.linalg.norm(r) < cut_off:
+  if d < cut_off:
+      return futhark_net_abs(x[0], q[0], x[1], q[1], networkparameter)
+  else:
+      return 1e4
   # sigma_par = 2
   # sigma_ort = 3
   # energy = futhark_hgo(x, q, epsilon, sigma_par, sigma_ort)
-  print(energy)
-  return energy
+
 
 if __name__ == '__main__':
 
@@ -145,5 +163,12 @@ if __name__ == '__main__':
     FT_net = context.from_futhark(force_torque_bodies)
     print(FT[0])
     print(FT_net[0])
+
+    #Check the value of the energy
+    futh_energy = futhark_net_abs(locations[0], orientations[0], locations[1], orientations[1], networkparameter)
+    hgo_energy =hgo.HGO(np.concatenate((locations,orientations)))
+
+    print("Futhark energy %d" % futh_energy)
+    print("Futhark energy %d" % hgo_energy)
 
     #print(FT[0])

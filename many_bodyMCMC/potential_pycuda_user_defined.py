@@ -8,7 +8,9 @@ import sys
 #sys.path.append('../quaternion_integrator')
 # print(os.getcwd())
 #
+sys.path.append('..')
 sys.path.append('../..')
+# sys.path.append('../../..')
 from quaternion_integrator.quaternion import Quaternion
 
 from multi_bodies.rods.tools import pair_histograms as ph
@@ -26,13 +28,16 @@ def HGO(X):
     #L = 0.5 # particle length
     #cut_off = 1.5*L
     a = 0.3 # larger range?
-    b = a/5;
+    b = a/5
     L = 2*a
     p = 5
     R = 0 # want to compute shortest distance between line segments
 
     quat1 = Quaternion(q_all[0:4]) #How to create a quaternion?
     quat2 = Quaternion(q_all[4:])
+
+    # quat1 = np.array(q_all[0:4]) #How to create a quaternion?
+    # quat2 = np.array(q_all[4:])
     d = ph.shortestDist(x[0:3],x[3:6],quat1,quat2,L,R)
 
     cut_off = 1.5*(a+b)

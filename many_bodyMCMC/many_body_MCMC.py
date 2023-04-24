@@ -123,7 +123,7 @@ if __name__ == '__main__':
   blob_radius = read.blob_radius
   periodic_length = read.periodic_length
   max_translation = blob_radius * 0.1
-  max_translation = 0.2 #just to try
+  max_translation = 0.3 #just to try
   weight = 1.0 * read.g
   kT = read.kT
   network = 1
@@ -132,6 +132,7 @@ if __name__ == '__main__':
   if network:
       #Load network parameters
       filename = '../multi_bodies/p1_a2_b3.net'
+      filename = '../multi_bodies/hgo5bad.net'
       netparams = fi.read_network_parameter(filename)
 
 
@@ -208,7 +209,7 @@ if __name__ == '__main__':
     # calculate potential of proposed new state
     if network:
         sample_state_energy = fi.compute_total_energy(bodies, netparams)
-        print(sample_state_energy)
+
 
     else:
         sample_state_energy = potential_pycuda_user_defined.compute_total_energy(bodies,
