@@ -73,7 +73,49 @@ def calc_body_body_forces_torques_futhark_net(bodies, r_vectors, networkparamete
     force_torque_bodies = context.networkInteraction(networkparameter, locations, orientations)
     return context.from_futhark(force_torque_bodies)
 
-def compute_total_energy(bodies, networkparameter):
+def compute_total_energy_ref(bodies):
+  '''
+  This function compute the energy of the bodies.
+  '''
+
+  # Determine number of threads and blocks for the GPU
+  Nbodies = np.int32(len(bodies))
+  # Create location and orientation arrays
+
+  x = np.zeros((Nbodies, 3))
+  q = np.zeros((Nbodies, 4))
+  # for k, b in enumerate(bodies):
+  #   x[k] = b.location_new
+  #   q[k] = b.orientation_new.getAsVector()
+
+  for i in range(Nbodies):
+      x[i] = bodies[i].location_new
+      q[i] = bodies[i].orientation_new.getAsVector()
+    #q[k*4 + 1 : k*4 + 4] = b.orientation_new.p
+  #print(np.shape(x))
+  #NB: So far we consider only two particles!
+  #energy = futhark_net(x,q,networkparameter)
+
+  # Needed to determine cut_off
+  a = 0.3
+  b = a/5
+  L = 2*a
+  R = 0
+  p = 5
+  quat1 = Quaternion(q[0]) #How to create a quaternion?
+  quat2 = Quaternion(q[1])
+
+  d = ph.shortestDist(x[0], x[1], quat1, quat2,L,R)
+  cut_off = 1.5*(a+b)
+  #cut_off = 0.5*cut_off
+  #print(cut_off)
+  #if np.linalg.norm(r) < cut_off:
+  if d < cut_off:
+      return futhark_hgo_abs(x[0], q[0], x[1], q[1], p, a, b)
+  else:
+      return 1e4
+
+def compute_total_energy_net(bodies, networkparameter):
   '''
   This function compute the energy of the bodies.
   '''

@@ -20,6 +20,7 @@ from multi_bodies.rods.tools import pair_histograms as ph
 #def HGO(r,quaternion_i,quaternion_j):
 def HGO(X):
     # X = x,q
+    
     x = X[0:6]
     q_all = X[6:]
     # set parameters

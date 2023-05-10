@@ -7,13 +7,13 @@ Physics 143, 144107 (2015). doi: 10.1063/1.4932062
 
 import numpy as np
 import copy
-from quaternion_integrator.quaternion import Quaternion 
+from quaternion_integrator.quaternion import Quaternion
 import sys
 
 class Body(object):
   '''
   Small class to handle a single body.
-  '''  
+  '''
   def __init__(self, location, orientation, reference_configuration, blob_radius):
     '''
     Constructor. Take arguments like ...
@@ -29,9 +29,10 @@ class Body(object):
     # Number of blobs
     self.Nblobs = reference_configuration.shape[0]
     # Reference configuration. Coordinates of blobs for quaternion [1, 0, 0, 0]
-    # and location = np.array[0, 0, 0]) as a np.array.shape = (Nblobs, 3) 
+    # and location = np.array[0, 0, 0]) as a np.array.shape = (Nblobs, 3)
     # or np.array.shape = (Nblobs * 3)
     self.reference_configuration = np.reshape(reference_configuration[:,0:3], (self.Nblobs, 3))
+    #print(type(self.reference_configuration))
     # Blob masses
     self.blob_masses = np.ones(self.Nblobs)
     # Blob radius
@@ -59,8 +60,8 @@ class Body(object):
     self.prescribed_kinematics = False
     self.mobility_blobs_cholesky = None
     self.ID = None
-  
-  
+
+
   def get_r_vectors(self, location = None, orientation = None):
     '''
     Return the coordinates of the blobs.
@@ -75,16 +76,16 @@ class Body(object):
     rotation_matrix = orientation.rotation_matrix()
     r_vectors = np.dot(self.reference_configuration, rotation_matrix.T)
     r_vectors += location
-    return r_vectors   
+    return r_vectors
 
 
   def calc_rot_matrix(self, location = None, orientation = None):
-    ''' 
+    '''
     Calculate the matrix R, where the i-th 3x3 block of R gives
     (R_i x) = -1 (r_i cross x).
     R has shape (3*Nblobs, 3).
     '''
-    r_vectors = self.get_r_vectors(location, orientation) - (self.location if location is None else location)    
+    r_vectors = self.get_r_vectors(location, orientation) - (self.location if location is None else location)
     rot_matrix = np.zeros((r_vectors.shape[0], 3, 3))
     rot_matrix[:,0,1] = r_vectors[:,2]
     rot_matrix[:,0,2] = -r_vectors[:,1]
@@ -100,7 +101,7 @@ class Body(object):
     '''
     Returns a block matrix with dimensions (Nblobs, 1)
     with each block being a 3x3 identity matrix.
-    '''  
+    '''
     J = np.zeros((3*self.Nblobs, 3))
     J[0::3,0] = 1.0
     J[1::3,1] = 1.0
@@ -116,19 +117,19 @@ class Body(object):
 
 
   def check_function(self, location = None, orientation = None, distance = None):
-    ''' 
+    '''
     Function to check that the body didn't cross the wall,
     i.e., all its blobs have z > distance. Default distance is 0.
     '''
     # Define distance
     if not distance:
       distance = 0.0
-      
+
     # Get location and orientation
     if location is None:
       location = self.location
     if orientation is None:
-      orientation = self.orientation      
+      orientation = self.orientation
 
     # Get current configuration
     r_vectors = self.get_r_vectors(location, orientation)
@@ -173,7 +174,7 @@ class Body(object):
     Return the force on the blobs.
     '''
     return self.function_force_blobs()
-  
+
 
   def default_zero_blobs(self, *args, **kwargs):
     return np.zeros((self.Nblobs, 3))
@@ -197,7 +198,7 @@ class Body(object):
     forces and torques to velocities and angular
     velocites.
     '''
-    K = self.calc_K_matrix()      
+    K = self.calc_K_matrix()
     if M_inv is not None:
       return np.linalg.pinv( np.dot(K.T, np.dot(M_inv, K)) )
     if M is None:
@@ -223,12 +224,9 @@ class Body(object):
     max_distance = 0.
     for i in range(self.reference_configuration.size - 1):
       for blob in self.reference_configuration[i+1:]:
-        blob_distance = np.linalg.norm(blob - self.reference_configuration[i]) 
+        blob_distance = np.linalg.norm(blob - self.reference_configuration[i])
         if blob_distance > max_distance:
           max_distance = blob_distance
 
     self.body_length = max_distance + 2*self.blob_radius
     return self.body_length
-
-
-    

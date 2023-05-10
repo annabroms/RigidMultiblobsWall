@@ -2,11 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 from multiprocessing import Pool # for file processing in parallel
+import multiprocessing
 #from numpy import quaternion
 from scipy.stats import ks_2samp
 import sys
 import os
 import timeit
+from itertools import repeat
+from tabulate import tabulate
+from scipy import stats
 
 
 #from ../../../many_bodyMCMC
@@ -19,6 +23,7 @@ sys.path.append('../../..')
 sys.path.append('../..')
 from quaternion_integrator.quaternion import Quaternion
 
+from body import body
 
 
 #from ...quaternion_integrator.quaternion import Quaternion
@@ -27,6 +32,11 @@ from quaternion_integrator.quaternion import Quaternion
 # import potential_pycuda_user_defined
 from many_bodyMCMC import potential_pycuda_user_defined
 #from many_bodyMCMC import potential_pycuda_user_defined
+
+
+from futhark_ffi import Futhark
+import multi_bodies._futhark_interaction as _futhark_interaction
+import multi_bodies.futhark_interaction as fi
 
 
 def centerDist(x1,x2):
@@ -315,6 +325,45 @@ def getPotential(x1,x2,q1,q2):
     #Here, it depends on what data we are looking at!
     return potential_pycuda_user_defined.HGO(np.concatenate((x1,x2,q1,q2)))
 
+def getPotentialSingle(x1,x2,q1,q2):
+    #Here, it depends on what data we are looking at!
+    return potential_pycuda_user_defined.HGO(np.concatenate((x1,x2,q1,q2)).astype(np.float32)) #just to try this!np.concatenate((x1,x2,q1,q2)))
+
+def getBodies(x1,x2,q1,q2):
+    Nbodies = 2
+    struct_locations = np.zeros((Nbodies, 3))
+    struct_orientations = np.zeros((Nbodies, 4))
+    struct_locations[0] = x1
+    struct_locations[1] = x2
+    struct_orientations[0] = q1
+    struct_orientations[1] = q2
+    struct_ref_config = np.array([[0, 0, 0]])
+    bodies = []
+    for i in range(2):
+        #Create minimalistic description of the bodies
+        b = body.Body(struct_locations[i], Quaternion(struct_orientations[i]), struct_ref_config, 0)
+        #b.ID = read.structures_ID[ID]
+        #body_length = b.calc_body_length()
+        #max_body_length = (body_length if body_length > max_body_length else max_body_length)
+
+        b.location_new = b.location_new
+        b.orientation_new = b.orientation
+        bodies.append(b)
+    return np.array(bodies)
+
+def getPotentialFuth(x1,x2,q1,q2):
+    #Here, it depends on what data we are looking at!
+    bodies = getBodies(x1,x2,q1,q2)
+    return fi.compute_total_energy_ref(bodies)
+
+def getPotentialNet(x1,x2,q1,q2,name):
+    #Here, it depends on what data we are looking at!
+    #name = "../../%s.net" % "hgo5bad"
+    name = "../../%s.net" % name
+    netparams = fi.read_network_parameter(name)
+    bodies = getBodies(x1,x2,q1,q2)
+    energy = fi.compute_total_energy_net(bodies, netparams)
+    return energy
 
 def getAlpha(x1,x2):
     #translate system
@@ -322,9 +371,32 @@ def getAlpha(x1,x2):
     return angle_between_vectors([1,0,0],x2_temp)
 
 
+def getAlignment(x1,x2,q1,q2,cap=float('inf')):
+    q = q1.getAsVector()
+    R = np.array([[1 - 2*q[2]**2 - 2*q[3]**2, 2*q[1]*q[2] - 2*q[3]*q[0], 2*q[1]*q[3] + 2*q[2]*q[0]],
+    [2*q[1]*q[2] + 2*q[3]*q[0], 1 - 2*q[1]**2 - 2*q[3]**2, 2*q[2]*q[3] - 2*q[1]*q[0]],
+    [2*q[1]*q[3] - 2*q[2]*q[0], 2*q[2]*q[3] + 2*q[1]*q[0], 1 - 2*q[1]**2 - 2*q[2]**2]])
+
+    u1 = R[:,2]
+
+    q = q2.getAsVector()
+    R = np.array([[1 - 2*q[2]**2 - 2*q[3]**2, 2*q[1]*q[2] - 2*q[3]*q[0], 2*q[1]*q[3] + 2*q[2]*q[0]],
+    [2*q[1]*q[2] + 2*q[3]*q[0], 1 - 2*q[1]**2 - 2*q[3]**2, 2*q[2]*q[3] - 2*q[1]*q[0]],
+    [2*q[1]*q[3] - 2*q[2]*q[0], 2*q[2]*q[3] + 2*q[1]*q[0], 1 - 2*q[1]**2 - 2*q[2]**2]])
+
+    u2 = R[:,2]
+    if np.linalg.norm(x1-x2)<cap:
+        return np.dot(u1,u2)**2
+    else:
+        return 0
+
+
 # Define the process function to apply to each group of three lines
 def process_group(lines):
     # Split each line into words and convert them to numbers
+#    print(paramname)
+    #print(type(args))
+    #lines,paramname = args
     numbers1 = [float(x) for x in lines[1].split()]
     numbers2 = [float(x) for x in lines[2].split()]
 
@@ -341,12 +413,19 @@ def process_group(lines):
         r,theta,phi = spherical_q2(q1,q2,x2,L)
         ccDist = centerDist(x1,x2)
         potVal = getPotential(x1,x2,q1.getAsVector(),q2.getAsVector())
+        potSingle = getPotentialSingle(x1,x2,q1.getAsVector(),q2.getAsVector())
+        potRef = getPotentialFuth(x1,x2,q1.getAsVector(),q2.getAsVector())
+        potValNetBad = getPotentialNet(x1,x2,q1.getAsVector(),q2.getAsVector(),"hgo5bad")
+        potValNetOkay = getPotentialNet(x1,x2,q1.getAsVector(),q2.getAsVector(),"hgo5okay")
+        potValNetGood = getPotentialNet(x1,x2,q1.getAsVector(),q2.getAsVector(),"hgo5good")
+        alignDist = getAlignment(x1,x2,q1,q2)
+        alignDist2 = getAlignment(x1,x2,q1,q2,0.5*L)
         #potVal = getPotential(x1,x2,q1,q2)
-        return sDist,ccDist,alphaDist,phi,theta,potVal
+        return sDist,ccDist,alphaDist,phi,theta,alignDist,alignDist2,potVal,potSingle,potRef,potValNetBad,potValNetOkay,potValNetGood
     else:
         return sDist
 
-def meanStats(dist,ax,distName,name):
+def meanStats(dist,ax,distName,name,col):
     numSteps = len(dist)
     #Computes the cumulative error of the mean for the distribution dist and plots it on axis ax
     cum_mean_dist = np.cumsum(dist[:]) / np.arange(1, len(dist)+1)
@@ -358,19 +437,48 @@ def meanStats(dist,ax,distName,name):
     ax[0].set_xlabel('Number of samples')
     ax[0].grid()
     legend = "%s" % name
-    ax[0].loglog(range(int(len(dist)/10)),np.abs(cum_mean_dist[0:int(len(dist)/10)]-cum_mean_dist[-1]),
-    label=legend)
+    ax[0].loglog(range(int(len(dist)/10)),np.abs(cum_mean_dist[0:int(len(dist)/10)]-cum_mean_dist[-1]),'-',color = col,label=legend)
+    #compute the error in a different way
+    cum_err =  np.sqrt(cum_var) / np.sqrt(np.arange(1, len(dist)+1))
+    # cum_err005 = 0.95*cum_err
+    # cum_err001 = 0.99*cum_err
+
+    errvec =np.zeros((1,6))
+
+    #Determine confidence intervals
+    alpha = 0.05
+    critical_value = stats.norm.ppf(1 - (1 - alpha) / 2)
+    standard_err = cum_err[-1]
+    margin_of_error = critical_value * standard_err
+    errvec[0,0] = cum_mean_dist[-1] - margin_of_error
+    errvec[0,1] = cum_mean_dist[-1] + margin_of_error
+
+    alpha = 0.01
+    critical_value = stats.norm.ppf(1 - (1 - alpha) / 2)
+    margin_of_error = critical_value * standard_err
+    errvec[0,2] = cum_mean_dist[-1] - margin_of_error
+    errvec[0,3] = cum_mean_dist[-1] + margin_of_error
+    errvec[0,4] = standard_err
+    errvec[0,5] = np.abs(cum_mean_dist[int(len(dist)/10)]-cum_mean_dist[-1])
+
+
+
+    ax[0].loglog(range(int(len(dist))),cum_err[0:int(len(dist))],'--',color = col,label = 'standard error')
+    #ax[0].loglog(range(int(len(dist))),cum_err001[0:int(len(dist))],'-.',color = col,label = 'error est alpha=0.01')
     ax[0].set_title(distName)
-    ax[0].loglog(range(1,int(numSteps/10)),2/np.sqrt(range(1,int(numSteps/10))),'k.-')#,label = "O(1/sqrt(N))")
+    ax[0].loglog(range(1,int(numSteps/10)),2/np.sqrt(range(1,int(numSteps/10))),'k.-',label = "O(1/sqrt(N))")
     ax[0].legend()
 
     # Visualise the mean itself
 
-    ax[1].semilogx(range(numSteps),cum_mean_dist,label=legend)
+    ax[1].semilogx(range(numSteps),cum_mean_dist,label=legend,color = col)
     ax[1].set_ylabel('Mean')
     ax[1].set_xlabel('Number of samples')
     ax[1].legend()
     ax[1].grid()
+
+
+    return np.array(errvec)
 
     # #Visualise variance
     # ax.semilogx(range(numSteps),cum_var)
@@ -390,7 +498,19 @@ def readDists(filename):
     # Apply the process_group function to each group of three lines using the Pool object
     if view_all:
         #sDist,ccDist,alphaDist,phiDist,thetaDist = pool.map(process_group, groups)
+        #paramList = [paramname for i in range(len(groups))]
+
+        # groups = (groups,repeat(paramname))
+        # lines,paramname = groups
+        #
+        #
         result = pool.map(process_group, groups)
+
+        result
+        #a_results = pool.apply_async(process_group, args=(groups, paramname))
+        #result = pool.starmap(process_group, [groups, paramname])
+        # retrieve the return value results
+        #results = a_results.get()
 
         return zip(*result)
     else:
@@ -444,7 +564,7 @@ def quantilePlot(dist1,dist2,name1,name2,distname):
     plt.ylabel("Quantiles of Data 2")
 
     # Perform the Kolmogorov-Smirnov test
-    statistic, p_value = ks_2samp(sDist, sDist2)
+    statistic, p_value = ks_2samp(dist1, dist2)
     # Print the results
     print("KS statistic:", statistic)
     print("p-value:", p_value) #should be less than 0.05
@@ -469,6 +589,9 @@ if __name__ == '__main__':
     name3 = "MCMC_okay_cut1.5"
     name4 = "MCMC_good_cut1.5"
     compName = "HGO5"
+    #compName = "testing_hgo5"
+
+    #paramNames = ["hgo5bad","hgo5okay","hgo5good"]
     # name = "Langevin_analytic_cut5L_test"
     # name = "MALA_analytic_cut5L_1e-2"
     # name2 = "MALA_analytic_cut5L_1e-1"
@@ -488,7 +611,7 @@ if __name__ == '__main__':
     # for debugging the plotting routine
     # name = 'test'
     # filename = "../../../many_bodyMCMC/run.two.config"
-    numSteps = 1000000 # number of MCMC runs
+    #numSteps = 1000000 # number of MCMC runs
 #    numSteps = 100000 # number of MCMC runs
     #was 10^6 here!
     L = 0.5 #particle length
@@ -499,16 +622,16 @@ if __name__ == '__main__':
     compare_data = 1
 
     names  = ["test"]
-    names = [name1, name2, name3, name4]
+    names = [name1, name2]
+    #names = ["test", "test"]
+    names = [name1]
+    test_names = names
+    numFiles = len(names)
+    #names = [name1, name2, name3, name4]
+    #names = [name1,name2]
     print(names)
 
-    sDist = []
-    ccDist = []
-    alphaDist = []
-    phiDist = []
-    thetaDist = []
-    potDist = []
-
+    #Initialise figures
     sstring = ""
     fig1,ax1 = plt.subplots(2)
     fig2,ax2 = plt.subplots(2)
@@ -519,33 +642,138 @@ if __name__ == '__main__':
     fig7,ax7= plt.subplots()
     fig8,ax8 = plt.subplots()
     fig9,ax9= plt.subplots()
+    fig10,ax10= plt.subplots(2)
+    fig11,ax11= plt.subplots(2)
+    fig12,ax12= plt.subplots()
+    fig13,ax13= plt.subplots()
 
-    for name in names:
+    #store error estimates
+    RMSE = np.zeros((4,len(names)))
+    RMSE_rel = np.zeros((4,len(names)))
+
+    serr_vec = np.zeros((len(names),6))
+    cerr_vec = np.zeros((len(names),6))
+    perr_vec = np.zeros((len(names),6))
+    aerr_vec = np.zeros((len(names),6))
+    acaperr_vec = np.zeros((len(names),6))
+
+    # Store KS tests
+    ks_sdist = np.zeros((len(names),2))
+    ks_cdist  = np.zeros((len(names),2))
+    ks_adist  = np.zeros((len(names),2))
+    ks_alphadist  = np.zeros((len(names),2))
+    ks_acapdist  = np.zeros((len(names),2))
+    ks_tdist = np.zeros((len(names),2))
+    ks_phdist  = np.zeros((len(names),2))
+    ks_pdist  = np.zeros((len(names),2))
+    ks_pNetdist  = np.zeros((len(names),2))
+
+
+    cols = ['r','b','g','m','c']
+
+    #For each run, do:
+
+    for i,name in enumerate(names):
         filename = "../../../../%s.two.config" % name
+        #paramname = "../../%s.net" % paramNames[i+1]
         ####### PREPARE DATA ########################
         # Enables qq-plots
-        sDist2 = sDist
-        ccDist2 = ccDist
-        alphaDist2 = alphaDist
-        phiDist2 = phiDist
-        thetaDist2 = thetaDist
-        potDist2 = potDist
+        if i == 1:
+            sDist2 = sDist
+            ccDist2 = ccDist
+            alphaDist2 = alphaDist
+            phiDist2 = phiDist
+            thetaDist2 = thetaDist
+            potDist2 = potDist
+            alignDist2 = alignDist
+            alignDistCap2 = alignDistCap
+
 
         #unpack
-        sDist,ccDist,alphaDist,phiDist,thetaDist,potDist = readDists(filename)
+        sDist,ccDist,alphaDist,phiDist,thetaDist,alignDist,alignDistCap,potDist,potDistSingle,potDistRef,potDistNetBad,potDistNetOkay,potDistNetGood = readDists(filename)
+        # lists = [sDist,ccDist,alphaDist,phiDist,thetaDist,alignDist,alignDistCap,potDist,potDistNetBad,potDistNetOkay,potDistNetGood]
+        # for list in lists:
+        #     list = np.array(list)
+        #     print(type(list))
+
         sDist = np.array(sDist)
         ccDist = np.array(ccDist)
+        alphaDist = np.array(alphaDist)
+        phiDist = np.array(phiDist)
+        alignDist = np.array(alignDist)
+        alignDistCap = np.array(alignDistCap)
         potDist = np.array(potDist)
+        potDistSingle = np.array(potDistSingle)
+        potDistRef = np.array(potDistRef)
+        potDistNetBad = np.array(potDistNetBad)
+        potDistNetOkay = np.array(potDistNetOkay)
+        potDistNetGood = np.array(potDistNetGood)
+
         #do stuff with the data
 
-        print("Starting to visualise...")
+        #Compare netwórk data to analytic potential with ks-test
+        if i > 0:
+            ks_sdist[i,:]  = np.array(ks_2samp(sDist, sDist2))
+            ks_cdist[i,:]  = np.array(ks_2samp(ccDist, ccDist2))
+            ks_alphadist[i,:]  = np.array(ks_2samp(alphaDist, alphaDist2))
+            ks_adist[i,:]  = np.array(ks_2samp(alignDist, alignDist2))
+            ks_acapdist[i,:]  = np.array(ks_2samp(alignDistCap, alignDistCap2))
+            ks_phdist[i,:]  = np.array(ks_2samp(phiDist, phiDist2))
+            ks_tdist[i,:]  = np.array(ks_2samp(thetaDist, thetaDist2))
+            ks_pdist[i,:]  = np.array(ks_2samp(potDist, potDist2))
+            if i ==1:
+                ks_pNetdist[i,:] = np.array(ks_2samp(potDist, potDistNetBad))
+            elif i == 2:
+                ks_pNetdist[i,:] = np.array(ks_2samp(potDist, potDistNetOkay))
+            elif i == 3:
+                ks_pNetdist[i,:] = np.array(ks_2samp(potDist, potDistNetGood))
+            else:
+                ks_pNetdist[i,:] = np.array(ks_2samp(potDist, potDistRef))
+
+
+        #compute rms error for the potential, absolute and relative
+
+        MSE = np.square(np.subtract(potDist,potDistRef)).mean()
+        RMSE[0,i] = math.sqrt(MSE)
+        print(MSE)
+        RMSEnorm = np.square(potDist).mean()
+        RMSE_rel[0,i] = math.sqrt(MSE)/RMSEnorm
+
+        MSE = np.square(np.subtract(potDist,potDistNetBad)).mean()
+        RMSE[1,i] = math.sqrt(MSE)
+        RMSEnorm = np.square(potDist).mean()
+        RMSE_rel[1,i] = math.sqrt(MSE)/RMSEnorm
+
+        MSE = np.square(np.subtract(potDist,potDistNetOkay)).mean()
+        RMSE[2,i] = math.sqrt(MSE)
+        RMSEnorm = np.square(potDist).mean()
+        RMSE_rel[2,i] = math.sqrt(MSE)/RMSEnorm
+
+        MSE = np.square(np.subtract(potDist,potDistNetGood)).mean()
+        RMSE[3,i] = math.sqrt(MSE)
+        RMSEnorm = np.square(potDist).mean()
+        RMSE_rel[3,i] = math.sqrt(MSE)/RMSEnorm
+
+
+
+
+        #Visualise mean, convergence of the mean and compute statistical errors for different quantities
+
+        print("Starting to visualise...%u" % i)
+        print(type(sDist))
         #Convergence of the mean:
-        meanStats(sDist,ax1,"shortest distance", name)
-        meanStats(ccDist,ax2,"center-center distance", name)
-        meanStats(potDist,ax3,"Energy",name)
+        serr_vec[i,:] = meanStats(sDist,ax1,"shortest distance", name,cols[i])
+        #cerr005,cerr001,cerr = meanStats(ccDist,ax2,"center-center distance", name,cols[i])
+        cerr_vec[i,:] = meanStats(ccDist,ax2,"center-center distance", name,cols[i])
+        # perr005,perr001,perr = meanStats(potDist,ax3,"Energy",name,cols[i])
+        perr_vec[i,:] = meanStats(potDist,ax3,"Energy",name,cols[i])
+
+        aerr_vec[i,:] = meanStats(alignDist,ax10,"alignment", name,cols[i])
+        acaperr_vec[i,:] = meanStats(alignDistCap,ax11,"near alignment", name,cols[i])
 
 
-        # Histograms over distances (shortest and center distance) and the three angles, alpha, phi, theta
+        # Histograms over distances (shortest and center distance), the three angles, alpha, phi, theta,
+        #and the near and total alignment
         bins = np.linspace(0, 0.5*L, num=61)
         showHist(sDist,ax4,name,bins=bins)
         ax4.set_xlabel('shortest distance')
@@ -571,21 +799,167 @@ if __name__ == '__main__':
         showHist(potDist,ax9,name,bins=bins)
         ax9.set_xlabel('U')
 
-    fig1.savefig('Mean_err_shortest_dist_%s.png' % compName)
-    fig2.savefig('Mean_err_center_dist_%s.png' % compName)
-    fig3.savefig('Mean_err_potential_%s.png' % compName)
+        showHist(alignDist,ax12,name,bins=30)
+        ax12.set_xlabel('alignment')
 
-    fig4.savefig('Hist_shortest_dist_%s.png' % compName)
-    fig5.savefig('Hist_center_dist_%s.png' % compName)
-    fig6.savefig('Hist_alpha_%s.png' % compName)
-    fig7.savefig('Hist_phi_dist_%s.png' % compName)
-    fig8.savefig('Hist_theta_dist_%s.png' % compName)
-    fig9.savefig('Hist_U_%s.png' % compName)
+        bins = np.linspace(0, 0.2*L, num=31)
+        showHist(alignDistCap,ax13,name,bins=bins)
+        ax13.set_xlabel('near alignment')
 
-    #Do a quantile quantile plot
-    quantilePlot(ccDist,ccDist2,name1,name2,"cc_distance")
+    # Write all figures to file
+    fig1.savefig('%s/Mean_err_shortest_dist_%s.png' % (compName,compName))
+    fig2.savefig('%s/Mean_err_center_dist_%s.png' % (compName,compName))
+    fig3.savefig('%s/Mean_err_potential_%s.png' % (compName,compName))
+    fig10.savefig('%s/Mean_err_alignment_%s.png' % (compName,compName))
+    fig11.savefig('%s/Mean_err_near_alignment_%s.png' % (compName,compName))
 
-    print("Finalised plotting")
+    fig4.savefig('%s/Hist_shortest_dist_%s.png' % (compName,compName))
+    fig5.savefig('%s/Hist_center_dist_%s.png' % (compName,compName))
+    fig6.savefig('%s/Hist_alpha_%s.png' % (compName,compName))
+    fig7.savefig('%s/Hist_phi_dist_%s.png' % (compName,compName))
+    fig8.savefig('%s/Hist_theta_dist_%s.png' % (compName,compName))
+    fig9.savefig('%s/Hist_U_%s.png' % (compName,compName))
+    fig12.savefig('%s/Hist_alignment_%s.png' % (compName,compName))
+    fig13.savefig('%s/Hist_near_alignment_%s.png' % (compName,compName))
+    plt.close('all')
+
+
+    # Write statistical errors to table
+    stat_names = ["shortest distance", "center-center distance", "alignment", "close alignment","potential value"]
+    errvecs = [serr_vec,cerr_vec, perr_vec, aerr_vec, acaperr_vec]
+
+    # Size of statistical errors?
+    standard_err = np.zeros((len(test_names),len(stat_names)))
+    est_err = np.zeros((len(test_names),len(stat_names)))
+    for i,(name, errvec) in enumerate(zip(stat_names, errvecs)):
+        print("\nStatistical error estimates: %s" % name)
+        standard_err[:,i] = errvec[:,4]
+        est_err[:,i] = errvec[:,5]
+        print(tabulate(errvec[:,4:], headers=['standard err', 'estimate']))
+
+    #Write to latex
+    #Column names
+    column_names = stat_names
+    # Row names
+    row_names = test_names
+    # Convert the matrix to a nested list
+    matrix_list = standard_err.tolist()
+    #matrix_list = [['{:.2e}'.format(element) for element in row] for row in standard_err]
+    # Insert row names as the first column in the matrix list
+    matrix_list = [[row_name] + row for row_name, row in zip(row_names, matrix_list)]
+
+    # Generate the LaTeX table with column and row names
+    latex_table = tabulate(matrix_list, headers=column_names, tablefmt="latex")
+
+    matrix_list = est_err.tolist()
+    matrix_list = [[row_name] + row for row_name, row in zip(row_names, matrix_list)]
+    # Generate the LaTeX table with column and row names
+    latex_table = latex_table + '\n\n'+ tabulate(matrix_list, headers=column_names, tablefmt="latex")
+
+    # Save the LaTeX table to a file
+    with open("%s/statistical_errors.tex" % compName, "w") as f:
+        f.write(latex_table)
+
+    #Draw confidence intervals
+    x_values = list(range(1,len(errvecs)+1))
+    xtick_labels = ['shortest distance', 'center-center distance', 'potential','alignment','near alignment']  # Custom xtick labels
+
+    def plot_conf(inds,alpha):
+        # Plotting the intervals,
+        #fig14,ax14 = plt.subplots()
+
+        for k in range(len(errvecs)):
+            errvec = errvecs[k]
+            for i in range(numFiles): #assume we have 4 different potentials to compare
+                C_curr = errvec[i,:]
+                if i==0:
+                    c = 'b'
+                else:
+                    c = 'r'
+                plt.errorbar(x_values[k]+0.1*i,np.mean(C_curr[inds]),
+                yerr = np.array([[C_curr[inds[0]]],[C_curr[inds[1]]]]),
+                fmt='o', capsize=5,color = c)
+
+        # Additional plot settings
+        plt.xlabel('Groups')
+        plt.ylabel('Values')
+        plt.title('Paired Confidence Intervals, alpha =%1.2e' % alpha)
+
+        # Customize xticks
+        plt.xticks(x_values, xtick_labels,rotation='45')  # Set xtick locations and labels
+        plt.grid(True)
+
+    fig14,ax14 = plt.subplots()
+    plt.gcf().set_size_inches(8, 8)  # Set the figure size (increase as needed)
+    #plt.tight_layout()  # Adjust the layout to prevent overlap
+    plot_conf([0,1],0.05)
+    fig14.savefig('%s/Confidence_intervals_0.05_%s.png' % (compName,compName))
+
+    fig15,ax15 = plt.subplots()
+    plt.gcf().set_size_inches(8, 8)  # Set the figure size (increase as needed)
+    plot_conf([2,3],0.01)
+    fig15.savefig('%s/Confidence_intervals_0.01_%s.png' % (compName,compName))
+
+
+
+
+
+
+
+
+
+    #Print RMSE
+    print("\nPotential RMSE")
+    print(tabulate(RMSE, headers=['futhark','bad', 'okay', 'good']))
+    print("\nPotential relative RMSE")
+    print(tabulate(RMSE_rel, headers=['futhark','bad', 'okay', 'good']))
+
+
+    #Print KS tests
+    names = ["shortest distance", "center-center distance", "alignment", "near alignment", "alpha", "theta", "phi", "potential", "net potential"]
+    kslists = [ks_sdist, ks_cdist, ks_adist, ks_acapdist, ks_alphadist, ks_tdist, ks_phdist, ks_pdist, ks_pNetdist]
+    pmat005 = np.zeros((numFiles,len(names)),dtype=bool)
+    pmat001 = np.zeros((numFiles,len(names)),dtype=bool)
+    for i,(name, kslist) in enumerate(zip(names, kslists)):
+        print("\nKS test: %s" % name)
+        print(tabulate(kslist, headers=['KS', 'p']))
+        pmat005[:,i] = [bool(k<0.05) for k in kslist[:,1]]# bool(kslist[:,1]<0.05)
+        pmat001[:,i] = [bool(k<0.01) for k in kslist[:,1]]
+
+
+    # Visualise p values in matrix plot (imshow)
+    # Sample row and column labels
+    row_labels = ['Futhark','Bad', 'Okay', 'Good']
+    row_labels = ['test','test']
+    col_labels = names
+
+    # Plotting the boolean matrices
+    fig16,ax16 = plt.subplots()
+    plt.imshow(pmat005, interpolation='nearest')
+    #print(range(pmat.shape[0]))
+    plt.xticks(range(pmat005.shape[1]), col_labels,rotation='65')
+    plt.yticks(range(pmat005.shape[0]), row_labels)
+    # Add gridlines
+    #plt.grid(True, color='black', linewidth=0.5)
+    fig16.savefig('%s/KS_test_alpha%1.2e%s.png' % (compName,0.05,compName))
+
+    fig17,ax17 = plt.subplots()
+    plt.imshow(pmat001, interpolation='nearest')
+    #print(range(pmat.shape[0]))
+    plt.xticks(range(pmat001.shape[1]), col_labels,rotation='65')
+    plt.yticks(range(pmat001.shape[0]), row_labels)
+    # Add gridlines
+    #plt.grid(True, color='black', linewidth=0.5)
+    fig16.savefig('%s/KS_test_alpha%1.2e%s.png' % (compName,0.05,compName))
+
+
+    # Maybe we want a qq-plot?
+    name1 = 'Analytic'
+    name2 = 'bad'
+    quantilePlot(potDist,potDistNetGood,name1,name2,"potentials")
+
+
+
     # Open the input file and read the lines
 
 
@@ -618,16 +992,94 @@ if __name__ == '__main__':
         #             thetaDist[int(i/3-1)] = theta
 
 
- # TO LOOK AT THE CUOFF:
-    fig,ax = plt.subplots()
-    plt.scatter(sDist,potDist)
-    ax.set_yscale('log')
-    ax.set_ylabel('U')
-    ax.set_xlabel('shortest distance')
-    fig.savefig('Potential_distance_log_%s.png' % name)
+ # TO LOOK AT THE CUTOFF:
+    num_nets = 5
+    fig1,ax1 = plt.subplots(num_nets,1,figsize=(10, 8))
+    fig2,ax2 = plt.subplots(num_nets,1,figsize=(10, 8))
+    fig3,ax3 = plt.subplots(num_nets,1,figsize=(10, 8))
+    fig4,ax4 = plt.subplots(num_nets,1,figsize=(10, 8))
+    fig5,ax5 = plt.subplots(num_nets,1,figsize=(10, 9))
+    fig6,ax6 = plt.subplots(num_nets,1,figsize=(10, 10))
 
-    fig,ax = plt.subplots()
-    plt.scatter(sDist,potDist)
-    ax.set_ylabel('U')
-    ax.set_xlabel('shortest distance')
-    fig.savefig('Potential_distance_%s.png' % name)
+    endInd = min(len(sDist),1000)
+    #potDist = potDistRef
+    for k,(dist,name) in enumerate(zip([potDistNetBad,potDistNetOkay,potDistNetGood,potDistRef,potDistSingle],["Bad","Okay","Good","HGO futhark", "Single precision"])):
+
+        ax1[k].scatter(sDist[0:endInd],potDist[0:endInd],marker='o', facecolors='none', edgecolors='blue',label = "analytic")
+        ax1[k].scatter(sDist[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
+        print(sum(dist[0:endInd]<0))
+        ax2[k].scatter(sDist[0:endInd],potDist[0:endInd],marker='o', facecolors='none', edgecolors='blue',label = "analytic")
+        ax2[k].scatter(sDist[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
+
+        ax3[k].scatter(potDist[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
+        ax4[k].scatter(potDist[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
+
+        #Visualise the relative error
+        ax5[k].loglog(potDist[0:endInd],np.abs(potDist[0:endInd]-dist[0:endInd])/np.abs(potDist[0:endInd]),'.',label = name)
+        threshold = 1e-4;
+        #p = potDist[0:endInd]
+        p = potDist
+        indices = np.where(p > threshold)[0]
+        ax6[k].loglog(potDist[indices],np.abs(potDist[indices]-dist[indices])/np.abs(potDist[indices]),'.',label = name)
+        ax6[k].set_ylim(1e-7, 100)
+        yticks = [1e-7, 1e-6, 1e-5, 1e-4, 1e-3,1e-2,1e-1,1,10]
+        ax6[k].set_yticks(yticks)
+        ax6[k].grid(which='minor', axis='y', linestyle='dotted')
+        ax6[k].grid(which='minor', axis='x', linestyle='dotted')
+
+
+        ax1[k].set_yscale('log')
+        ax3[k].set_yscale('log')
+        ax3[k].set_xscale('log')
+
+        ax1[k].set_ylabel('U')
+        if k ==3:
+            ax1[k].set_xlabel('shortest distance')
+            ax2[k].set_xlabel('shortest distance')
+            ax3[k].set_xlabel('U analytic')
+            ax4[k].set_xlabel('U analytic')
+        ax1[k].grid()
+        ax1[k].legend()
+
+        ax2[k].set_ylabel('U')
+        ax2[k].grid()
+        ax2[k].legend()
+
+
+        ax3[k].set_ylabel('U net')
+        ax3[k].grid()
+        ax3[k].legend()
+        ax3[k].loglog(np.logspace(-10,1),np.logspace(-10,1),'k--')
+
+
+        ax4[k].set_ylabel('U net')
+        ax4[k].grid()
+        ax4[k].plot(np.linspace(0,2.5),np.linspace(0,2.5),'k--')
+        ax4[k].legend()
+
+        ax5[k].grid()
+        ax5[k].legend()
+        ax5[k].set_ylabel('Relative error in potential')
+        ax5[k].set_xlabel('Potential value')
+
+        ax6[k].grid()
+        ax6[k].legend()
+        ax6[k].set_ylabel('Relative error in potential')
+        ax6[k].set_xlabel('Potential value')
+
+
+
+
+    fig1.savefig('%s/Potential_distance_log_%s.png' % (compName,compName))
+    fig2.savefig('%s/Potential_distance_%s.png' % (compName,compName))
+
+
+    fig3.savefig('%s/Potential_potential_log_%s.png' % (compName,compName))
+    fig4.savefig('%s/Potential_potential%s.png' % (compName,compName))
+
+    fig5.savefig('%s/Potential_potential_error_%s.png' % (compName,compName))
+    fig6.savefig('%s/Potential_potential_error_zoom_%s.png' % (compName,compName))
+
+
+
+    print("Finalised plotting")

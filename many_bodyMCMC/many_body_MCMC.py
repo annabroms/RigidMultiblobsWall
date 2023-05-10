@@ -131,8 +131,8 @@ if __name__ == '__main__':
 
   if network:
       #Load network parameters
-      filename = '../multi_bodies/p1_a2_b3.net'
-      filename = '../multi_bodies/hgo5bad.net'
+     # filename = '../multi_bodies/p1_a2_b3.net'
+      filename = '../multi_bodies/hgo5good.net'
       netparams = fi.read_network_parameter(filename)
 
 
