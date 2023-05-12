@@ -443,23 +443,30 @@ def meanStats(dist,ax,distName,name,col):
     # cum_err005 = 0.95*cum_err
     # cum_err001 = 0.99*cum_err
 
-    errvec =np.zeros((1,6))
+    errvec =np.zeros((1,7))
 
     #Determine confidence intervals
     alpha = 0.05
     critical_value = stats.norm.ppf(1 - (1 - alpha) / 2)
     standard_err = cum_err[-1]
     margin_of_error = critical_value * standard_err
-    errvec[0,0] = cum_mean_dist[-1] - margin_of_error
-    errvec[0,1] = cum_mean_dist[-1] + margin_of_error
+#    print(margin_of_error)
+    #errvec[0,0] = cum_mean_dist[-1] - margin_of_error
+    #errvec[0,1] = cum_mean_dist[-1] + margin_of_error
+
+    errvec[0,0] = margin_of_error
+    errvec[0,1] = margin_of_error
 
     alpha = 0.01
     critical_value = stats.norm.ppf(1 - (1 - alpha) / 2)
     margin_of_error = critical_value * standard_err
-    errvec[0,2] = cum_mean_dist[-1] - margin_of_error
-    errvec[0,3] = cum_mean_dist[-1] + margin_of_error
+    #errvec[0,2] = cum_mean_dist[-1] - margin_of_error
+    #errvec[0,3] = cum_mean_dist[-1] + margin_of_error
+    errvec[0,2] = margin_of_error
+    errvec[0,3] = margin_of_error
     errvec[0,4] = standard_err
     errvec[0,5] = np.abs(cum_mean_dist[int(len(dist)/10)]-cum_mean_dist[-1])
+    errvec[0,6] = cum_mean_dist[-1]
 
 
 
@@ -589,7 +596,7 @@ if __name__ == '__main__':
     name3 = "MCMC_okay_cut1.5"
     name4 = "MCMC_good_cut1.5"
     compName = "HGO5"
-    #compName = "testing_hgo5"
+    compName = "testing_hgo5"
 
     #paramNames = ["hgo5bad","hgo5okay","hgo5good"]
     # name = "Langevin_analytic_cut5L_test"
@@ -623,11 +630,13 @@ if __name__ == '__main__':
 
     names  = ["test"]
     names = [name1, name2]
-    #names = ["test", "test"]
-    names = [name1]
+    names = ["test", "test","test","test"]
+    #names = [name1]
+
+
+    names = [name1, name2, name3, name4]
     test_names = names
     numFiles = len(names)
-    #names = [name1, name2, name3, name4]
     #names = [name1,name2]
     print(names)
 
@@ -650,12 +659,14 @@ if __name__ == '__main__':
     #store error estimates
     RMSE = np.zeros((4,len(names)))
     RMSE_rel = np.zeros((4,len(names)))
+    RMSE_jump = np.zeros((4,len(names)))
+    RMSE_jump_rel = np.zeros((4,len(names)))
 
-    serr_vec = np.zeros((len(names),6))
-    cerr_vec = np.zeros((len(names),6))
-    perr_vec = np.zeros((len(names),6))
-    aerr_vec = np.zeros((len(names),6))
-    acaperr_vec = np.zeros((len(names),6))
+    serr_vec = np.zeros((len(names),7))
+    cerr_vec = np.zeros((len(names),7))
+    perr_vec = np.zeros((len(names),7))
+    aerr_vec = np.zeros((len(names),7))
+    acaperr_vec = np.zeros((len(names),7))
 
     # Store KS tests
     ks_sdist = np.zeros((len(names),2))
@@ -732,27 +743,21 @@ if __name__ == '__main__':
 
 
         #compute rms error for the potential, absolute and relative
+        for k,dist in enumerate([potDistRef,potDistNetBad,potDistNetOkay,potDistNetGood]):
+            MSE = np.square(np.subtract(potDist,dist)).mean()
+            RMSE[k,i] = math.sqrt(MSE)
+            RMSEnorm = np.square(potDist).mean()
+            RMSE_rel[k,i] = math.sqrt(MSE)/RMSEnorm
 
-        MSE = np.square(np.subtract(potDist,potDistRef)).mean()
-        RMSE[0,i] = math.sqrt(MSE)
-        print(MSE)
-        RMSEnorm = np.square(potDist).mean()
-        RMSE_rel[0,i] = math.sqrt(MSE)/RMSEnorm
+            MSE_jump = np.square(np.subtract(np.diff(potDist),np.diff(dist))).mean()
+            RMSE_jump[k,i] = math.sqrt(MSE_jump)
+            RMSEnorm = np.square(np.diff(potDist)).mean()
+            RMSE_jump_rel[k,i] = math.sqrt(MSE_jump)/RMSEnorm
 
-        MSE = np.square(np.subtract(potDist,potDistNetBad)).mean()
-        RMSE[1,i] = math.sqrt(MSE)
-        RMSEnorm = np.square(potDist).mean()
-        RMSE_rel[1,i] = math.sqrt(MSE)/RMSEnorm
 
-        MSE = np.square(np.subtract(potDist,potDistNetOkay)).mean()
-        RMSE[2,i] = math.sqrt(MSE)
-        RMSEnorm = np.square(potDist).mean()
-        RMSE_rel[2,i] = math.sqrt(MSE)/RMSEnorm
 
-        MSE = np.square(np.subtract(potDist,potDistNetGood)).mean()
-        RMSE[3,i] = math.sqrt(MSE)
-        RMSEnorm = np.square(potDist).mean()
-        RMSE_rel[3,i] = math.sqrt(MSE)/RMSEnorm
+
+
 
 
 
@@ -831,11 +836,13 @@ if __name__ == '__main__':
     # Size of statistical errors?
     standard_err = np.zeros((len(test_names),len(stat_names)))
     est_err = np.zeros((len(test_names),len(stat_names)))
+    means = np.zeros((len(test_names),len(stat_names)))
     for i,(name, errvec) in enumerate(zip(stat_names, errvecs)):
         print("\nStatistical error estimates: %s" % name)
         standard_err[:,i] = errvec[:,4]
         est_err[:,i] = errvec[:,5]
-        print(tabulate(errvec[:,4:], headers=['standard err', 'estimate']))
+        means[:,i] = errvec[:,6]
+        print(tabulate(errvec[:,4:], headers=['standard err', 'estimate','mean']))
 
     #Write to latex
     #Column names
@@ -856,19 +863,27 @@ if __name__ == '__main__':
     # Generate the LaTeX table with column and row names
     latex_table = latex_table + '\n\n'+ tabulate(matrix_list, headers=column_names, tablefmt="latex")
 
+    #Do the same thing for the means
+    matrix_list = means.tolist()
+    matrix_list = [[row_name] + row for row_name, row in zip(row_names, matrix_list)]
+
+    latex_table = latex_table + '\n\n'+ tabulate(matrix_list, headers=column_names, tablefmt="latex")
+
     # Save the LaTeX table to a file
     with open("%s/statistical_errors.tex" % compName, "w") as f:
         f.write(latex_table)
 
     #Draw confidence intervals
     x_values = list(range(1,len(errvecs)+1))
-    xtick_labels = ['shortest distance', 'center-center distance', 'potential','alignment','near alignment']  # Custom xtick labels
-
-    def plot_conf(inds,alpha):
+    x_ticks = list(range(1,numFiles+1))
+    row_labels = ['shortest distance', 'center-center distance', 'potential','alignment','near alignment']  # Custom xtick labels
+    labels = ['Futhark','Bad', 'Okay', 'Good']
+    def plot_conf(inds,alpha,ax):
         # Plotting the intervals,
         #fig14,ax14 = plt.subplots()
 
         for k in range(len(errvecs)):
+
             errvec = errvecs[k]
             for i in range(numFiles): #assume we have 4 different potentials to compare
                 C_curr = errvec[i,:]
@@ -876,36 +891,28 @@ if __name__ == '__main__':
                     c = 'b'
                 else:
                     c = 'r'
-                plt.errorbar(x_values[k]+0.1*i,np.mean(C_curr[inds]),
+                ax[k].errorbar(x_ticks[i],C_curr[6],
                 yerr = np.array([[C_curr[inds[0]]],[C_curr[inds[1]]]]),
                 fmt='o', capsize=5,color = c)
+            ax[k].set_title(row_labels[k])
+            if k<len(errvecs)-1:
+                ax[k].set_xticks([])
+            else:
+                ax[k].set_xticks(x_ticks, labels,rotation='45')
+            ax[k].grid(True)
 
-        # Additional plot settings
-        plt.xlabel('Groups')
-        plt.ylabel('Values')
-        plt.title('Paired Confidence Intervals, alpha =%1.2e' % alpha)
-
-        # Customize xticks
-        plt.xticks(x_values, xtick_labels,rotation='45')  # Set xtick locations and labels
-        plt.grid(True)
-
-    fig14,ax14 = plt.subplots()
-    plt.gcf().set_size_inches(8, 8)  # Set the figure size (increase as needed)
+    fig14,ax14 = plt.subplots(len(errvecs),1)
+    plt.gcf().set_size_inches(6, 12)  # Set the figure size (increase as needed)
     #plt.tight_layout()  # Adjust the layout to prevent overlap
-    plot_conf([0,1],0.05)
+    plot_conf([0,1],0.05,ax14)
+    fig14.suptitle('Paired Confidence Intervals, alpha =%1.2e' % 0.05)
     fig14.savefig('%s/Confidence_intervals_0.05_%s.png' % (compName,compName))
 
-    fig15,ax15 = plt.subplots()
-    plt.gcf().set_size_inches(8, 8)  # Set the figure size (increase as needed)
-    plot_conf([2,3],0.01)
+    fig15,ax15 = plt.subplots(len(errvecs),1)
+    plt.gcf().set_size_inches(6, 12,)  # Set the figure size (increase as needed)
+    plot_conf([2,3],0.01,ax15)
+    fig14.suptitle('Paired Confidence Intervals, alpha =%1.2e' % 0.01)
     fig15.savefig('%s/Confidence_intervals_0.01_%s.png' % (compName,compName))
-
-
-
-
-
-
-
 
 
     #Print RMSE
@@ -913,6 +920,10 @@ if __name__ == '__main__':
     print(tabulate(RMSE, headers=['futhark','bad', 'okay', 'good']))
     print("\nPotential relative RMSE")
     print(tabulate(RMSE_rel, headers=['futhark','bad', 'okay', 'good']))
+    print("\nPotential jump RMSE")
+    print(tabulate(RMSE_jump, headers=['futhark','bad', 'okay', 'good']))
+    print("\nPotential jump relative RMSE")
+    print(tabulate(RMSE_jump_rel, headers=['futhark','bad', 'okay', 'good']))
 
 
     #Print KS tests
@@ -930,7 +941,11 @@ if __name__ == '__main__':
     # Visualise p values in matrix plot (imshow)
     # Sample row and column labels
     row_labels = ['Futhark','Bad', 'Okay', 'Good']
-    row_labels = ['test','test']
+    if numFiles == 2:
+        row_labels = ['test','test']
+    elif numFiles == 3:
+        row_labels = ['test','test','test']
+
     col_labels = names
 
     # Plotting the boolean matrices
@@ -1000,16 +1015,30 @@ if __name__ == '__main__':
     fig4,ax4 = plt.subplots(num_nets,1,figsize=(10, 8))
     fig5,ax5 = plt.subplots(num_nets,1,figsize=(10, 9))
     fig6,ax6 = plt.subplots(num_nets,1,figsize=(10, 10))
+    fig7,ax7 = plt.subplots(num_nets,1,figsize=(10, 10))
+    fig8,ax8 = plt.subplots(num_nets,1,figsize=(10, 10))
+    fig9,ax9 = plt.subplots(num_nets,1,figsize=(10, 10))
+    fig10,ax10 = plt.subplots(num_nets,1,figsize=(10, 10))
+    fig11,ax11 = plt.subplots(num_nets,1,figsize=(10, 8))
+    fig12,ax12 = plt.subplots(num_nets,1,figsize=(10, 8))
 
-    endInd = min(len(sDist),1000)
+
+#    endInd = min(len(sDist),1000)
+    endInd = len(sDist)
     #potDist = potDistRef
     for k,(dist,name) in enumerate(zip([potDistNetBad,potDistNetOkay,potDistNetGood,potDistRef,potDistSingle],["Bad","Okay","Good","HGO futhark", "Single precision"])):
 
         ax1[k].scatter(sDist[0:endInd],potDist[0:endInd],marker='o', facecolors='none', edgecolors='blue',label = "analytic")
         ax1[k].scatter(sDist[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
-        print(sum(dist[0:endInd]<0))
+        print("Any negative potential values? %u " % sum(dist[0:endInd]<0))
         ax2[k].scatter(sDist[0:endInd],potDist[0:endInd],marker='o', facecolors='none', edgecolors='blue',label = "analytic")
         ax2[k].scatter(sDist[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
+
+        ax12[k].scatter(alignDistCap[0:endInd],potDist[0:endInd],marker='o', facecolors='none', edgecolors='blue',label = "analytic")
+        ax12[k].scatter(alignDistCap[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
+        # same thing with logarithmic set_yscale
+        ax11[k].scatter(alignDistCap[0:endInd],potDist[0:endInd],marker='o', facecolors='none', edgecolors='blue',label = "analytic")
+        ax11[k].scatter(alignDistCap[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
 
         ax3[k].scatter(potDist[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
         ax4[k].scatter(potDist[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
@@ -1020,30 +1049,62 @@ if __name__ == '__main__':
         #p = potDist[0:endInd]
         p = potDist
         indices = np.where(p > threshold)[0]
+
         ax6[k].loglog(potDist[indices],np.abs(potDist[indices]-dist[indices])/np.abs(potDist[indices]),'.',label = name)
+        ax6[k].loglog(np.logspace(-4,0,2),np.array([0.01,0.01]),'r--')
         ax6[k].set_ylim(1e-7, 100)
         yticks = [1e-7, 1e-6, 1e-5, 1e-4, 1e-3,1e-2,1e-1,1,10]
         ax6[k].set_yticks(yticks)
         ax6[k].grid(which='minor', axis='y', linestyle='dotted')
         ax6[k].grid(which='minor', axis='x', linestyle='dotted')
 
+        ## COMPUTE ERROR IN PROBABILITY instead
+        ax7[k].loglog(potDist[indices],np.abs(np.exp(-potDist[indices])-np.exp(-dist[indices])),'.',label = name)
+        ax8[k].loglog(potDist[indices],np.abs(np.exp(-potDist[indices])-np.exp(-dist[indices]))/np.exp(-potDist[indices]),'.',label = name)
+        ax7[k].loglog(np.logspace(-4,0,2),np.array([0.01,0.01]),'r--')
+        ax8[k].loglog(np.logspace(-4,0,2),np.array([0.01,0.01]),'r--')
 
+        ## COMPUTE DIFFERENCE IN POTENTIAL values
+        ax9[k].loglog(np.abs(np.diff(potDist[indices])-np.diff(dist[indices])),'.',label = name)
+        #do the same thing but normalise, this could potentially lead to division by zero
+        ax10[k].loglog((np.abs(np.diff(potDist[indices])-np.diff(dist[indices])))/np.abs(np.diff(potDist[indices])),'.',label = name)
+        ax10[k].loglog(np.logspace(-1,3,2),np.array([0.01,0.01]),'r--')
+        ## ADJUST FIGURES
         ax1[k].set_yscale('log')
+        ax11[k].set_yscale('log')
         ax3[k].set_yscale('log')
         ax3[k].set_xscale('log')
 
         ax1[k].set_ylabel('U')
-        if k ==3:
+        if k ==4:
             ax1[k].set_xlabel('shortest distance')
             ax2[k].set_xlabel('shortest distance')
             ax3[k].set_xlabel('U analytic')
             ax4[k].set_xlabel('U analytic')
+            ax6[k].set_xlabel('Potential value')
+            ax8[k].set_xlabel('Potential value')
+            ax7[k].set_xlabel('Potential value')
+            ax5[k].set_xlabel('Potential value')
+            ax9[k].set_xlabel('Potential jump')
+            ax10[k].set_xlabel('Potential jump')
+            ax11[k].set_xlabel('Alignment')
+            ax12[k].set_xlabel('Alignment')
+
+
         ax1[k].grid()
         ax1[k].legend()
 
         ax2[k].set_ylabel('U')
         ax2[k].grid()
         ax2[k].legend()
+
+        ax11[k].set_ylabel('U')
+        ax11[k].grid()
+        ax11[k].legend()
+
+        ax12[k].set_ylabel('U')
+        ax12[k].grid()
+        ax12[k].legend()
 
 
         ax3[k].set_ylabel('U net')
@@ -1060,18 +1121,50 @@ if __name__ == '__main__':
         ax5[k].grid()
         ax5[k].legend()
         ax5[k].set_ylabel('Relative error in potential')
-        ax5[k].set_xlabel('Potential value')
+
 
         ax6[k].grid()
         ax6[k].legend()
         ax6[k].set_ylabel('Relative error in potential')
-        ax6[k].set_xlabel('Potential value')
 
+
+        ax7[k].grid()
+        ax7[k].legend()
+        ax7[k].set_ylabel('Abs err in probability')
+        ax7[k].set_xlabel('Potential value')
+        yticks = [1e-10,1e-9,1e-8,1e-7, 1e-6, 1e-5, 1e-4, 1e-3,1e-2,1e-1,1]
+        ax7[k].set_yticks(yticks)
+        ax7[k].grid(which='minor', axis='y', linestyle='dotted')
+        ax7[k].grid(which='minor', axis='x', linestyle='dotted')
+
+        ax8[k].grid()
+        ax8[k].legend()
+        ax8[k].set_ylabel('Rel err in probability')
+        ax8[k].set_yticks(yticks)
+        ax8[k].grid(which='minor', axis='y', linestyle='dotted')
+        ax8[k].grid(which='minor', axis='x', linestyle='dotted')
+
+        ax9[k].grid()
+        ax9[k].legend()
+        ax9[k].set_ylabel('Err in pot jump')
+        ax9[k].set_yticks(yticks)
+        ax9[k].grid(which='minor', axis='y', linestyle='dotted')
+        ax9[k].grid(which='minor', axis='x', linestyle='dotted')
+
+        ax10[k].grid()
+        ax10[k].legend()
+        ax10[k].set_ylabel('Err in pot jump')
+        ax10[k].set_yticks(yticks)
+        ax10[k].grid(which='minor', axis='y', linestyle='dotted')
+        ax10[k].grid(which='minor', axis='x', linestyle='dotted')
 
 
 
     fig1.savefig('%s/Potential_distance_log_%s.png' % (compName,compName))
     fig2.savefig('%s/Potential_distance_%s.png' % (compName,compName))
+
+    fig11.savefig('%s/Potential_alignment_log_%s.png' % (compName,compName))
+    fig12.savefig('%s/Potential_alignment_%s.png' % (compName,compName))
 
 
     fig3.savefig('%s/Potential_potential_log_%s.png' % (compName,compName))
@@ -1079,6 +1172,12 @@ if __name__ == '__main__':
 
     fig5.savefig('%s/Potential_potential_error_%s.png' % (compName,compName))
     fig6.savefig('%s/Potential_potential_error_zoom_%s.png' % (compName,compName))
+
+    fig7.savefig('%s/Probability_error_%s.png' % (compName,compName))
+    fig8.savefig('%s/Relative_probability_error_zoom_%s.png' % (compName,compName))
+
+    fig9.savefig('%s/Err_potential_jump_%s.png' % (compName,compName))
+    fig10.savefig('%s/Rel_err_potential_jump_%s.png' % (compName,compName))
 
 
 

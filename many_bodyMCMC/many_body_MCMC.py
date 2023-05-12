@@ -126,7 +126,7 @@ if __name__ == '__main__':
   max_translation = 0.3 #just to try
   weight = 1.0 * read.g
   kT = read.kT
-  network = 1
+  network = 0
 
 
   if network:
