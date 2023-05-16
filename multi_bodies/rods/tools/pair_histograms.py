@@ -11,6 +11,8 @@ import timeit
 from itertools import repeat
 from tabulate import tabulate
 from scipy import stats
+import mpl_scatter_density # adds projection='scatter_density'
+from matplotlib.colors import LinearSegmentedColormap
 
 
 #from ../../../many_bodyMCMC
@@ -206,7 +208,9 @@ def distance(p1, q1, p2, q2):
 
     # calculate distance between closest points
     d = pc - qc
-    dist = np.sqrt(np.dot(d, d))
+
+    #dist = np.sqrt(np.dot(d, d))
+    dist = np.dot(d,d)**(1/2)
 
     return dist
 
@@ -217,7 +221,11 @@ def endpoints(q, L, c):
     """
 
     # convert quaternion to rotation matrix
-    R = q.rotation_matrix() #if a quatrernion is used
+    #R = q.rotation_matrix() #if a quatrernion is used
+    R = np.array([[1 - 2*q[2]**2 - 2*q[3]**2, 2*q[1]*q[2] - 2*q[3]*q[0], 2*q[1]*q[3] + 2*q[2]*q[0]],
+    [2*q[1]*q[2] + 2*q[3]*q[0], 1 - 2*q[1]**2 - 2*q[3]**2, 2*q[2]*q[3] - 2*q[1]*q[0]],
+    [2*q[1]*q[3] - 2*q[2]*q[0], 2*q[2]*q[3] + 2*q[1]*q[0], 1 - 2*q[1]**2 - 2*q[2]**2]])
+
     #R = quaternion_to_rotation_matrix(q)
     # calculate the direction vector of the line segment
     v = np.array([0, 0, L/2])
@@ -233,6 +241,7 @@ def shortestDist(x1,x2,q1,q2,L,R):
     L = L-2*R #correct for the semi-spherical caps
     p1,r1 = endpoints(q1, L, x1)
     p2,r2 = endpoints(q2, L, x2)
+
 
 #    print(np.linalg.norm(p1-r1)-L) #this is zero
     # print("End coord")
@@ -406,7 +415,7 @@ def process_group(lines):
     q1 = Quaternion(np.array(numbers1[3:]))
     q2 = Quaternion(np.array(numbers2[3:]))
 
-    sDist = shortestDist(x1,x2,q1,q2,L,R)
+    sDist = shortestDist(x1,x2,q1.getAsVector(),q2.getAsVector(),L,R)
 
     if view_all:
         alphaDist = getAlpha(x1,x2)
@@ -631,10 +640,11 @@ if __name__ == '__main__':
     names  = ["test"]
     names = [name1, name2]
     names = ["test", "test","test","test"]
+    fa = 0.01
     #names = [name1]
 
 
-    names = [name1, name2, name3, name4]
+    #names = [name1, name2, name3, name4]
     test_names = names
     numFiles = len(names)
     #names = [name1,name2]
@@ -1008,8 +1018,9 @@ if __name__ == '__main__':
 
 
  # TO LOOK AT THE CUTOFF:
-    num_nets = 5
+    num_nets = 4
     fig1,ax1 = plt.subplots(num_nets,1,figsize=(10, 8))
+    #fig1,ax1 = plt.subplots()
     fig2,ax2 = plt.subplots(num_nets,1,figsize=(10, 8))
     fig3,ax3 = plt.subplots(num_nets,1,figsize=(10, 8))
     fig4,ax4 = plt.subplots(num_nets,1,figsize=(10, 8))
@@ -1021,36 +1032,42 @@ if __name__ == '__main__':
     fig10,ax10 = plt.subplots(num_nets,1,figsize=(10, 10))
     fig11,ax11 = plt.subplots(num_nets,1,figsize=(10, 8))
     fig12,ax12 = plt.subplots(num_nets,1,figsize=(10, 8))
+    fig13,ax13 = plt.subplots(num_nets,1,figsize=(10, 8))
 
 
 #    endInd = min(len(sDist),1000)
     endInd = len(sDist)
     #potDist = potDistRef
-    for k,(dist,name) in enumerate(zip([potDistNetBad,potDistNetOkay,potDistNetGood,potDistRef,potDistSingle],["Bad","Okay","Good","HGO futhark", "Single precision"])):
+    #[potDistNetBad,potDistNetOkay,potDistNetGood,potDistRef,potDistSingle]
+    for k,(dist,name) in enumerate(zip([potDistNetBad,potDistNetOkay,potDistNetGood,potDistRef],["Bad","Okay","Good","HGO futhark", "Single precision"])):
 
-        ax1[k].scatter(sDist[0:endInd],potDist[0:endInd],marker='o', facecolors='none', edgecolors='blue',label = "analytic")
-        ax1[k].scatter(sDist[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
+        ax1[k].scatter(sDist[0:endInd],potDist[0:endInd],marker='o', facecolors='blue', edgecolors='none',alpha = fa,label = "analytic")
+        ax1[k].scatter(sDist[0:endInd],dist[0:endInd],marker='o', facecolors='orange', edgecolors='none',alpha = fa,label = name)
+
+        #scatter_density(ax1[k], sDist[0:endInd], dist[0:endInd],'Oranges')
+
+    #    using_mpl_scatter_density(fig1, sDist[0:endInd], potDist[0:endInd],'Blues')
         print("Any negative potential values? %u " % sum(dist[0:endInd]<0))
-        ax2[k].scatter(sDist[0:endInd],potDist[0:endInd],marker='o', facecolors='none', edgecolors='blue',label = "analytic")
-        ax2[k].scatter(sDist[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
+        ax2[k].scatter(sDist[0:endInd],potDist[0:endInd],marker='o', facecolors='blue', edgecolors='none',alpha = fa,label = "analytic")
+        ax2[k].scatter(sDist[0:endInd],dist[0:endInd],marker='o', facecolors='orange', edgecolors='none',alpha = fa,label = name)
 
-        ax12[k].scatter(alignDistCap[0:endInd],potDist[0:endInd],marker='o', facecolors='none', edgecolors='blue',label = "analytic")
-        ax12[k].scatter(alignDistCap[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
+        ax12[k].scatter(alignDistCap[0:endInd],potDist[0:endInd],marker='o', facecolors='blue', edgecolors='none',alpha = fa,label = "analytic")
+        ax12[k].scatter(alignDistCap[0:endInd],dist[0:endInd],marker='o', facecolors='orange', edgecolors='none',alpha = fa,label = name)
         # same thing with logarithmic set_yscale
-        ax11[k].scatter(alignDistCap[0:endInd],potDist[0:endInd],marker='o', facecolors='none', edgecolors='blue',label = "analytic")
-        ax11[k].scatter(alignDistCap[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
+        ax11[k].scatter(alignDistCap[0:endInd],potDist[0:endInd],marker='o', facecolors='blue', edgecolors='none',alpha = fa,label = "analytic")
+        ax11[k].scatter(alignDistCap[0:endInd],dist[0:endInd],marker='o', facecolors='orange', edgecolors='none',alpha = fa,label = name)
 
-        ax3[k].scatter(potDist[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
-        ax4[k].scatter(potDist[0:endInd],dist[0:endInd],marker='o', facecolors='none', edgecolors='orange',label = name)
+        ax3[k].scatter(potDist[0:endInd],dist[0:endInd],marker='o', facecolors='blue', edgecolors='none',alpha = fa,label = name)
+        ax4[k].scatter(potDist[0:endInd],dist[0:endInd],marker='o', facecolors='orange', edgecolors='none',alpha = fa,label = name)
 
         #Visualise the relative error
-        ax5[k].loglog(potDist[0:endInd],np.abs(potDist[0:endInd]-dist[0:endInd])/np.abs(potDist[0:endInd]),'.',label = name)
+        ax5[k].loglog(potDist[0:endInd],np.abs(potDist[0:endInd]-dist[0:endInd])/np.abs(potDist[0:endInd]),'.',alpha = fa,label = name)
         threshold = 1e-4;
         #p = potDist[0:endInd]
         p = potDist
         indices = np.where(p > threshold)[0]
 
-        ax6[k].loglog(potDist[indices],np.abs(potDist[indices]-dist[indices])/np.abs(potDist[indices]),'.',label = name)
+        ax6[k].loglog(potDist[indices],np.abs(potDist[indices]-dist[indices])/np.abs(potDist[indices]),'.',alpha = fa,label = name)
         ax6[k].loglog(np.logspace(-4,0,2),np.array([0.01,0.01]),'r--')
         ax6[k].set_ylim(1e-7, 100)
         yticks = [1e-7, 1e-6, 1e-5, 1e-4, 1e-3,1e-2,1e-1,1,10]
@@ -1059,16 +1076,21 @@ if __name__ == '__main__':
         ax6[k].grid(which='minor', axis='x', linestyle='dotted')
 
         ## COMPUTE ERROR IN PROBABILITY instead
-        ax7[k].loglog(potDist[indices],np.abs(np.exp(-potDist[indices])-np.exp(-dist[indices])),'.',label = name)
-        ax8[k].loglog(potDist[indices],np.abs(np.exp(-potDist[indices])-np.exp(-dist[indices]))/np.exp(-potDist[indices]),'.',label = name)
+        ax7[k].loglog(potDist[indices],np.abs(np.exp(-potDist[indices])-np.exp(-dist[indices])),'.',alpha = fa,label = name)
+        ax8[k].loglog(potDist[indices],np.abs(np.exp(-potDist[indices])-np.exp(-dist[indices]))/np.exp(-potDist[indices]),'.',alpha = fa,label = name)
         ax7[k].loglog(np.logspace(-4,0,2),np.array([0.01,0.01]),'r--')
         ax8[k].loglog(np.logspace(-4,0,2),np.array([0.01,0.01]),'r--')
 
         ## COMPUTE DIFFERENCE IN POTENTIAL values
-        ax9[k].loglog(np.abs(np.diff(potDist[indices])-np.diff(dist[indices])),'.',label = name)
+        ax9[k].loglog(np.abs(np.diff(potDist[indices])),np.abs(np.diff(potDist[indices])-np.diff(dist[indices])),'.',alpha = fa,label = name)
         #do the same thing but normalise, this could potentially lead to division by zero
-        ax10[k].loglog((np.abs(np.diff(potDist[indices])-np.diff(dist[indices])))/np.abs(np.diff(potDist[indices])),'.',label = name)
-        ax10[k].loglog(np.logspace(-1,3,2),np.array([0.01,0.01]),'r--')
+        ax10[k].loglog(np.abs(np.diff(potDist[indices])),(np.abs(np.diff(potDist[indices])-np.diff(dist[indices])))/np.abs(np.diff(potDist[indices])),'.',alpha = fa,label = name)
+        ax10[k].loglog(np.logspace(-4,1,2),np.array([0.01,0.01]),'r--')
+        ## Print all negative values
+        indices = np.where(dist < 0)[0]
+        ax13[k].semilogy(-dist[indices],'.',alpha = fa,label = name)
+
+
         ## ADJUST FIGURES
         ax1[k].set_yscale('log')
         ax11[k].set_yscale('log')
@@ -1076,7 +1098,7 @@ if __name__ == '__main__':
         ax3[k].set_xscale('log')
 
         ax1[k].set_ylabel('U')
-        if k ==4:
+        if k ==3:
             ax1[k].set_xlabel('shortest distance')
             ax2[k].set_xlabel('shortest distance')
             ax3[k].set_xlabel('U analytic')
@@ -1089,10 +1111,13 @@ if __name__ == '__main__':
             ax10[k].set_xlabel('Potential jump')
             ax11[k].set_xlabel('Alignment')
             ax12[k].set_xlabel('Alignment')
+            ax13[k].set_xlabel('Index')
 
 
         ax1[k].grid()
         ax1[k].legend()
+        yticks = [1e-14,1e-12,1e-10,1e-8,1e-6,1e-4, 1e-2, 1]
+        ax1[k].set_yticks(yticks)
 
         ax2[k].set_ylabel('U')
         ax2[k].grid()
@@ -1158,6 +1183,10 @@ if __name__ == '__main__':
         ax10[k].grid(which='minor', axis='y', linestyle='dotted')
         ax10[k].grid(which='minor', axis='x', linestyle='dotted')
 
+        ax13[k].legend()
+        ax13[k].set_ylabel('Negative pot values')
+        ax13[k].grid(which='minor', axis='y', linestyle='dotted')
+
 
 
     fig1.savefig('%s/Potential_distance_log_%s.png' % (compName,compName))
@@ -1178,6 +1207,112 @@ if __name__ == '__main__':
 
     fig9.savefig('%s/Err_potential_jump_%s.png' % (compName,compName))
     fig10.savefig('%s/Rel_err_potential_jump_%s.png' % (compName,compName))
+
+    fig13.savefig('%s/Negative_potvalues_%s.png' % (compName,compName))
+    plt.close('all')
+
+    ## Draw hisogram in potential vs distance data for certain alignment value
+    a1 = 0.01
+    a2 = 0.1
+    a3 = 0.25
+    a4 = 0.5
+    ind1 =  np.where(alignDist < a1)[0]
+    ind2 =  np.where(alignDist < a2)[0]
+    ind3 =  np.where(alignDist < a3)[0]
+    ind4 =  np.where(alignDist < a3)[0]
+    ind5 = np.where(alignDist > a4)[0]
+
+    fig1,ax1 = plt.subplots(1,5,figsize=(34, 8))
+    labels = ["%1.2f" % a for a in [a1,a2,a3,a4]]
+
+    for k,ind in enumerate([ind1,ind2,ind3,ind4,ind5]):
+        y_bins = np.logspace(np.log10(min(potDist[ind])), np.log10(max(potDist[ind])), 50)
+        hist = ax1[k].hist2d(sDist[ind],potDist[ind],bins=[50,y_bins], cmap='jet')
+        ax1[k].set_xlabel('shortest dist')
+        ax1[k].set_ylabel('Potential value')
+        ax1[k].set_yscale("log")
+        cbar = fig1.colorbar(hist[3], ax=ax1[k],label = 'Counts')
+        if k<len(labels):
+            ax1[k].set_title("alignment < %s " % labels[k],fontdict={'fontsize': 14,'fontweight':"bold"})
+
+    fig1.savefig('%s/Potential_ad_log_%s.png' % (compName,compName))
+
+    fig1,ax1 = plt.subplots()
+    plt.scatter(sDist,alignDist,marker='o', facecolors='orange', edgecolors='none',alpha = fa)
+    plt.xlabel('Shortest distance')
+    plt.ylabel('Alignment')
+    fig1.savefig('%s/Alignment_distance_%s.png' % (compName,compName))
+
+    ## DO the same thing for the error in the potential and in the probability
+    fig1,ax1 = plt.subplots(4,5,figsize=(32, 20))
+    fig2,ax2 = plt.subplots(4,5,figsize=(32, 20))
+    fig3,ax3 = plt.subplots(4,5,figsize=(32, 20))
+    fig4,ax4 = plt.subplots(4,5,figsize=(32, 20))
+    for i,(dist,name) in enumerate(zip([potDistNetBad,potDistNetOkay,potDistNetGood,potDistRef],["Bad","Okay","Good","HGO futhark"])):
+        for k,ind in enumerate([ind1,ind2,ind3,ind4,ind5]):
+            p = potDist[ind]
+            d = dist[ind]
+            s = sDist[ind]
+            subind = np.where(p>threshold)
+            err = np.abs(p[subind]-d[subind])/p[subind]
+            y_bins = np.logspace(-6, 2, 50)
+            hist = ax1[i,k].hist2d(s[subind],err,bins=[50,y_bins], cmap='jet')
+
+            ax1[i,k].set_ylabel('Err in pot value')
+            ax1[i,k].set_yscale("log")
+            cbar = fig1.colorbar(hist[3], ax=ax1[i,k],label = 'Counts')
+            if i == 0 and k<len(labels):
+                ax1[i,k].set_title("alignment < %s " % labels[k],fontdict={'fontsize': 14,'fontweight':"bold"})
+            if k == 0:
+                ax1[i,k].set_ylabel('%s \n Err in pot value' % name, fontdict={'fontsize': 14,'fontweight':"bold"})
+
+            #Error in probability
+            err_prob = np.abs(np.exp(-p[subind])-np.exp(-d[subind]))
+            y_bins = np.logspace(-6, 4, 50)
+            hist = ax2[i,k].hist2d(s[subind],err,bins=[50,y_bins], cmap='jet')
+            ax2[i,k].set_xlabel('shortest dist')
+            ax2[i,k].set_ylabel('Err in probability')
+            ax2[i,k].set_yscale("log")
+            cbar = fig1.colorbar(hist[3], ax=ax2[i,k],label = 'Counts')
+            if i == 0 and k<len(labels):
+                ax2[i,k].set_title("alignment < %s " % labels[k],fontdict={'fontsize': 14,'fontweight':"bold"})
+            if k == 0:
+                ax2[i,k].set_ylabel('%s \n Err in probability' % name, fontdict={'fontsize': 14,'fontweight':"bold"})
+
+            # Show error in probability vs potential value
+            err_prob = np.abs(np.exp(-p[subind])-np.exp(-d[subind]))
+            y_bins = np.logspace(-6, 4, 50)
+            x_bins = np.logspace(-4, 1, 50)
+            hist = ax3[i,k].hist2d(p[subind],err,bins=[x_bins,y_bins], cmap='jet')
+            ax3[i,k].set_xlabel('Potential value')
+            ax3[i,k].set_ylabel('Err in probability')
+            ax3[i,k].set_yscale("log")
+            ax3[i,k].set_xscale("log")
+            cbar = fig1.colorbar(hist[3], ax=ax3[i,k],label = 'Counts')
+            if i == 0 and k<len(labels):
+                ax3[i,k].set_title("alignment < %s " % labels[k],fontdict={'fontsize': 14,'fontweight':"bold"})
+            if k == 0:
+                ax3[i,k].set_ylabel('%s \n Err in probability' % name,fontdict={'fontsize': 14,'fontweight':"bold"})
+
+            #Show error in potential value vs potential x_value
+            err = np.abs(p[subind]-d[subind])/p[subind]
+            y_bins = np.logspace(-6, 2, 50)
+            hist = ax4[i,k].hist2d(p[subind],err,bins=[x_bins,y_bins], cmap='jet')
+            ax4[i,k].set_xlabel('Potential value')
+            ax4[i,k].set_ylabel('Err in pot value')
+            ax4[i,k].set_yscale("log")
+            ax4[i,k].set_xscale("log")
+            cbar = fig1.colorbar(hist[3], ax=ax4[i,k],label = 'Counts')
+            if i == 0 and k<len(labels):
+                ax4[i,k].set_title("alignment < %s " % labels[k],fontdict={'fontsize': 14,'fontweight':"bold"})
+            if k == 0:
+                ax4[i,k].set_ylabel('%s \n Err in pot value' % name,fontdict={'fontsize': 14,'fontweight':"bold"})
+
+    fig1.savefig('%s/Potential_error_ad_log_%s.png' % (compName,compName))
+    fig2.savefig('%s/Probability_error_ad_log_%s.png' % (compName,compName))
+    fig3.savefig('%s/Probability_error_au_log_%s.png' % (compName,compName))
+    fig4.savefig('%s/Potential_error_au_log_%s.png' % (compName,compName))
+
 
 
 

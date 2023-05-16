@@ -1,4 +1,4 @@
-n_steps                     1000
+n_steps                     1000000
 n_save                      1
 
 
@@ -18,7 +18,12 @@ domain				 no_wall
 save_clones                 one_file
 output_name                 ../../MCMC_analytic_cut1.5
 output_name                 ../../MCMC_cut_5bad_1.5
-output_name                 ../../test
+output_name                 ../../MCMC_good_cut1.5_1
+output_name                 ../../MCMC_good_cut1.5_1times5
+output_name                 ../../MCMC_analytic_cut1.5_1
+
+#output_name                 ../../test
+#output_name                 ../../test2
 #output_name                 ../../MALA_analytic_cut1.5
 
 

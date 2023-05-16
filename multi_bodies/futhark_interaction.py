@@ -102,8 +102,8 @@ def compute_total_energy_ref(bodies):
   L = 2*a
   R = 0
   p = 5
-  quat1 = Quaternion(q[0]) #How to create a quaternion?
-  quat2 = Quaternion(q[1])
+  quat1 = q[0] #How to create a quaternion?
+  quat2 = q[1]
 
   d = ph.shortestDist(x[0], x[1], quat1, quat2,L,R)
   cut_off = 1.5*(a+b)
@@ -143,8 +143,8 @@ def compute_total_energy_net(bodies, networkparameter):
   b = a/5
   L = 2*a
   R = 0
-  quat1 = Quaternion(q[0]) #How to create a quaternion?
-  quat2 = Quaternion(q[1])
+  quat1 = q[0] #How to create a quaternion?
+  quat2 = q[1]
 
   d = ph.shortestDist(x[0], x[1], quat1, quat2,L,R)
   cut_off = 1.5*(a+b)

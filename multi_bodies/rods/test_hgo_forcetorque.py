@@ -50,9 +50,12 @@ def calc_body_body_force_torque_new(x1,x2,q1,q2):
   force_torque = np.zeros((2, 3))
   force_torque_bodies = np.zeros((4, 3))
 
+
   grad= hgo.getGradient(np.concatenate((x1,x2)),np.concatenate((q1.getAsVector(),q2.getAsVector())))
+  #grad= hgo.getGradient(np.concatenate((x1,x2,q1.getAsVector(),q2.getAsVector())))
   Q1 = q1.gradToTourqueMatrix()
   Q2 = q2.gradToTourqueMatrix()
+
 
   # Add forces
   force_torque_bodies[0] = -grad[0:3]
@@ -85,9 +88,10 @@ if __name__ == '__main__':
         q1.random_orientation()
         q2.random_orientation()
 
-        d = ph.shortestDist(x1,x2,q1,q2,L,R)
+        d = ph.shortestDist(x1,x2,q1.getAsVector(),q2.getAsVector(),L,R)
 
     print("Distance is %.2e" % d)
+
     FT_python = calc_body_body_force_torque_new(x1,x2,q1,q2)
     print("Anna HGO")
     print(FT_python)
@@ -104,6 +108,12 @@ if __name__ == '__main__':
     epsilon = 10
     sigma_par = 1
     sigma_ort = 1/10
+
+    epsilon = 5
+    sigma_par = 0.3
+    sigma_ort = 0.3/5
+    print("Max strength is %f", epsilon*(1-((sigma_par**2-sigma_ort**2)/(sigma_par**2+sigma_ort**2))**2)**(-1/2))
+
     print(sigma_ort)
     force_torque_bodies = context.hgoInteraction(epsilon, sigma_par, sigma_ort, locations, orientations)
     FT = context.from_futhark(force_torque_bodies)
@@ -119,9 +129,9 @@ if __name__ == '__main__':
     print(FT[3]-FT_python[3])
 
 
-    ode = 0
+    ode = 3
     if ode:
-        case = 3
+        case = 1
 
         # Next, we want to look at time-scales
         if case == 1:
@@ -131,6 +141,7 @@ if __name__ == '__main__':
 
             x1 = np.array([0,0,0])
             x2 = np.array([0,0,L/2+R+delta])
+            #x2 = np.array([1e-4,1e-4,1e-4]) # overlapping configs
         elif case == 2:
             delta = 0.1
             q1 = Quaternion([1,0,0,0])
@@ -150,17 +161,17 @@ if __name__ == '__main__':
 
 
         #Check the start distance
-        p1,r1 = ph.endpoints(q1, L, x1)
-        p2,r2 = ph.endpoints(q2, L, x2)
+        p1,r1 = ph.endpoints(q1.getAsVector(), L, x1)
+        p2,r2 = ph.endpoints(q2.getAsVector(), L, x2)
         #d = ph.distance(p1, r1, p2, r2)
         cd = ph.centerDist(x1,x2)
-        sd = ph.shortestDist(x1,x2,q1,q2,L,R)
+        sd = ph.shortestDist(x1,x2,q1.getAsVector(),q2.getAsVector(),L,R)
         # print(cd)
         # print(sd)
 
 
         #time step the dynamics
-        dt = 1e-2 #time step size #Was 1e-3 here before
+        dt = 1e-3 #time step size #Was 1e-3 here before
         N = 1000 # number of time steps
         alphaVec = np.zeros(N)
         thetaVec = np.zeros(N)
@@ -174,7 +185,7 @@ if __name__ == '__main__':
             vel = calc_body_body_force_torque_new(x1,x2,q1,q2)
             x1 = x1 + dt*vel[0]
             x2 = x2 + dt*vel[2]
-            print(vel)
+            #print(vel)
             quat1_dt = Quaternion.from_rotation(vel[1]*dt)
             q1 = quat1_dt*q1
             quat2_dt = Quaternion.from_rotation(vel[3]*dt)
@@ -186,7 +197,7 @@ if __name__ == '__main__':
             r,theta,phi = ph.spherical_q2(q1,q2,x2,L)
             ccDist = ph.centerDist(x1,x2)
             potVal = ph.getPotential(x1,x2,q1.getAsVector(),q2.getAsVector())
-            sDist = ph.shortestDist(x1,x2,q1,q2,L,R)
+            sDist = ph.shortestDist(x1,x2,q1.getAsVector(),q2.getAsVector(),L,R)
 
             alphaVec[i] = alphaDist
             thetaVec[i] = theta
@@ -222,10 +233,16 @@ if __name__ == '__main__':
         fig.savefig('center_dist_scale.png')
 
         fig,ax = plt.subplots()
-        plt.plot(tVec,sVec)
+        plt.semilogy(tVec,sVec)
         ax.set_ylabel('shortes dist')
         ax.set_xlabel('t')
         fig.savefig('shortest_dist_scale.png')
+
+        fig,ax = plt.subplots()
+        plt.semilogy(sVec,potVec)
+        ax.set_xlabel('shortes dist')
+        ax.set_ylabel('Potential value')
+        fig.savefig('potential_distance.png')
 
         fig,ax = plt.subplots()
         plt.plot(tVec,potVec)

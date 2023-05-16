@@ -20,7 +20,7 @@ from multi_bodies.rods.tools import pair_histograms as ph
 #def HGO(r,quaternion_i,quaternion_j):
 def HGO(X):
     # X = x,q
-    
+
     x = X[0:6]
     q_all = X[6:]
     # set parameters
@@ -31,14 +31,15 @@ def HGO(X):
     a = 0.3 # larger range?
     b = a/5
     L = 2*a
-    p = 5
+    p = 1
     R = 0 # want to compute shortest distance between line segments
 
-    quat1 = Quaternion(q_all[0:4]) #How to create a quaternion?
-    quat2 = Quaternion(q_all[4:])
+    #quat1 = Quaternion(q_all[0:4]) #How to create a quaternion?
+    #quat2 = Quaternion(q_all[4:])
 
-    # quat1 = np.array(q_all[0:4]) #How to create a quaternion?
-    # quat2 = np.array(q_all[4:])
+    quat1 = np.array(q_all[0:4]) #How to create a quaternion?
+    quat2 = np.array(q_all[4:])
+
     d = ph.shortestDist(x[0:3],x[3:6],quat1,quat2,L,R)
 
     cut_off = 1.5*(a+b)
@@ -121,6 +122,7 @@ def HGO(X):
         #return *(np.linalg.norm(r) - cut_off)**2 #note that this function will not be continuous...
 
 def getGradient(x,q):
+    X = np.concatenate((x,q))
     my_grad = grad(HGO)
     X = np.concatenate((x,q))
     return my_grad(X)

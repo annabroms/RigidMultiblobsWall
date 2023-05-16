@@ -127,12 +127,14 @@ if __name__ == '__main__':
   weight = 1.0 * read.g
   kT = read.kT
   network = 0
+  weight = 1
 
 
   if network:
       #Load network parameters
      # filename = '../multi_bodies/p1_a2_b3.net'
-      filename = '../multi_bodies/hgo5good.net'
+      #filename = '../multi_bodies/hgo5good.net'
+      filename = '../multi_bodies/hgo1good.net'
       netparams = fi.read_network_parameter(filename)
 
 
@@ -171,7 +173,7 @@ if __name__ == '__main__':
   start_time = time.time()
 
   if network:
-      current_state_energy = fi.compute_total_energy(bodies, netparams)
+      current_state_energy = weight*fi.compute_total_energy_net(bodies, netparams)
   else:
       current_state_energy = potential_pycuda_user_defined.compute_total_energy(bodies,
                                                                            sample_r_vectors,
@@ -208,7 +210,7 @@ if __name__ == '__main__':
 
     # calculate potential of proposed new state
     if network:
-        sample_state_energy = fi.compute_total_energy(bodies, netparams)
+        sample_state_energy = weight*fi.compute_total_energy_net(bodies, netparams)
 
 
     else:
